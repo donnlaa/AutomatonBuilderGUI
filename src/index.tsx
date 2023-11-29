@@ -62,8 +62,10 @@ function App() {
     const closeConfigWindow = () => { setConfigWindowOpen(false); };
     const [useDarkMode, setDarkMode] = useState(false);
     const toggleDarkMode = () => { setDarkMode(!useDarkMode); };
-    return (
-        <>
+    useEffect(() => {
+        StateManager.useDarkMode = useDarkMode;
+    }, [useDarkMode]);
+    return (<div className={useDarkMode ? 'dark' : ''}>
             <NodeView />
             <div className='flex flex-row h-screen text-center'>
                 <div style={{ width: '300px' }}>
@@ -100,7 +102,7 @@ function App() {
             </div>
 
             {configWindowOpen ? <ClosableModalWindow title='Configure Automaton' close={closeConfigWindow}><ConfigureAutomatonWindow /></ClosableModalWindow> : <></>}
-        </>
+            </div>
     );
 }
 
