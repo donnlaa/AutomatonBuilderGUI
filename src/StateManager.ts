@@ -8,6 +8,7 @@ import { ChangeEvent, ChangeEventHandler } from "react";
 import { LightColorScheme, DarkColorScheme, ColorScheme } from "./ColorSchemes";
 
 export default class StateManager {
+    static _nextStateId = 0;
     public static get startNode(): NodeWrapper | null { return StateManager._startNode; }
     private static _startNode: NodeWrapper | null = null;
 
@@ -27,10 +28,12 @@ export default class StateManager {
     private static _startStateLine: Konva.Arrow | null = null;
     private static _nodeLayer: Konva.Layer | null = null;
     private static _transitionLayer: Konva.Layer | null = null;
+    private static _gridLayer: Konva.Layer | null = null;
 
     public static setSelectedObjects: React.Dispatch<React.SetStateAction<SelectableObject[]>> | null = null;
 
     private static _useDarkMode: boolean = false;
+    private static _snapToGridEnabled: boolean = false;
 
     public static get colorScheme() {
         if (this._useDarkMode) {
@@ -42,6 +45,14 @@ export default class StateManager {
     }
 
     private constructor() {
+    }
+
+    public static toggleSnapToGrid() {
+        StateManager._snapToGridEnabled = !StateManager._snapToGridEnabled;
+    }
+
+    public static isSnapToGridEnabled(): boolean {
+        return StateManager._snapToGridEnabled;
     }
 
     public static initialize() {
@@ -59,9 +70,14 @@ export default class StateManager {
         });
         this._stage.on('dblclick', (ev) => StateManager.onDoubleClick.call(this, ev));
         this._stage.on('click', (ev) => StateManager.onClick.call(this, ev));
+        this._stage.on('wheel', StateManager.handleWheelEvent);
+        this._stage.on('dragmove', StateManager.onDragMove);
 
         this._nodeLayer = new Konva.Layer();
         this._transitionLayer = new Konva.Layer();
+        this._gridLayer = new Konva.Layer();
+        this._stage.add(this._gridLayer);
+        this.drawGrid(); // Draw the initial grid
 
         this._tentConnectionLine = new Konva.Arrow({
             x: 0,
@@ -94,21 +110,96 @@ export default class StateManager {
         });
         this._transitionLayer.add(this._startStateLine);
 
+        
         this._stage.add(this._transitionLayer);
         this._stage.add(this._nodeLayer);
-
+        
         addEventListener('keydown', this.onKeyDown);
         addEventListener('resize', this.handleResize);
     }
+    public static get transitions(): Array<TransitionWrapper> {
+        return StateManager._transitionWrappers;
+      }
+
     //handles resizing the canvas when the window is resized using an event listener
     private static handleResize() {
         if (StateManager._stage) {
             StateManager._stage.width(window.innerWidth);
             StateManager._stage.height(window.innerHeight);
+
+            const gridLayer = StateManager._stage.findOne('.gridLayer');
+            if(gridLayer){
+                gridLayer.destroy() ;
+            }
+            StateManager.drawGrid();
+
             StateManager._stage.draw();
         }
     }
 
+    // getter for the stage position
+    public static getStagePosition(): { x: number; y: number } {
+        return this._stage ? { x: this._stage.x(), y: this._stage.y() } : { x: 0, y: 0 };
+    }
+    
+    // getter for the scale of the stage so it can be used in other classes
+    public static getStageScale(): { scaleX: number; scaleY: number } {
+        if (this._stage) {
+            return { scaleX: this._stage.scaleX(), scaleY: this._stage.scaleY() };
+        }
+        // Default scale is 1 if the stage is not initialized
+        return { scaleX: 1, scaleY: 1 };
+    }
+    
+    public static drawGrid() {
+        if (!StateManager._gridLayer || !StateManager._stage) {
+            console.error('Grid layer or stage is not initialized.');
+            return;
+        }
+    
+        // Clear any previous grid lines
+        StateManager._gridLayer.destroyChildren();
+    
+        const gridCellSize = 50; // Size of each cell in the grid
+        const scale = StateManager._stage.scaleX(); // Current scale of the stage
+        const stageWidth = StateManager._stage.width() / scale; // Visible width
+        const stageHeight = StateManager._stage.height() / scale; // Visible height
+        const stagePos = StateManager._stage.position(); // Current position of the stage
+    
+        // Adjust the start positions to account for stage position
+        const startX = -1 * (Math.round(stagePos.x / scale / gridCellSize) * gridCellSize);
+        const startY = -1 * (Math.round(stagePos.y / scale / gridCellSize) * gridCellSize);
+    
+        // Calculate the number of lines needed based on the stage size and scale
+        const linesX = Math.ceil(stageWidth / gridCellSize) + 2; // Extra lines to fill the space during drag
+        const linesY = Math.ceil(stageHeight / gridCellSize) + 2; // Extra lines to fill the space during drag
+    
+        // Create vertical lines
+        for (let i = 0; i < linesX; i++) {
+            let posX = startX + i * gridCellSize;
+            StateManager._gridLayer.add(new Konva.Line({
+                points: [posX, startY, posX, startY + linesY * gridCellSize],
+                stroke: this.colorScheme.gridColor,
+                strokeWidth: 1,
+                listening: false,
+            }));
+        }
+    
+        // Create horizontal lines
+        for (let j = 0; j < linesY; j++) {
+            let posY = startY + j * gridCellSize;
+            StateManager._gridLayer.add(new Konva.Line({
+                points: [startX, posY, startX + linesX * gridCellSize, posY],
+                stroke: this.colorScheme.gridColor,
+                strokeWidth: 1,
+                listening: false,
+            }));
+        }
+    
+        // Draw the grid
+        StateManager._gridLayer.batchDraw();
+    }
+    
     public static get currentTool() {
         return StateManager._currentTool;
     }
@@ -116,6 +207,13 @@ export default class StateManager {
     public static set currentTool(tool: Tool) {
         StateManager._currentTool = tool;
     }
+
+    private static onDragMove(evt: Konva.KonvaEventObject<MouseEvent>) {
+        console.log('Stage is being dragged. Redrawing grid.'); // This line logs to the console
+        StateManager.drawGrid();
+    }
+    
+    
 
     private static onClick(evt: Konva.KonvaEventObject<MouseEvent>) {
         let thingUnderMouse = StateManager._stage.getIntersection(StateManager._stage.getPointerPosition());
@@ -127,6 +225,7 @@ export default class StateManager {
     private static onDoubleClick(evt: Konva.KonvaEventObject<MouseEvent>) {
         if (StateManager.currentTool == Tool.States) {
             StateManager.addStateAtDoubleClickPos(evt);
+            
         }
         else if (StateManager.currentTool == Tool.Transitions) {
             console.log('in transition tool mode, so don\'t do anything');
@@ -134,18 +233,46 @@ export default class StateManager {
     }
 
     private static addStateAtDoubleClickPos(evt: Konva.KonvaEventObject<MouseEvent>) {
-        const x = evt.evt.pageX;
-        const y = evt.evt.pageY;
+        if (!StateManager._stage) return;
+    
+        const stage = StateManager._stage;
+        const pointerPosition = stage.getPointerPosition();
+        if (!pointerPosition) return;
+    
+        // Convert the pointer position to the stage's coordinate space
+        const scale = stage.scaleX(); // Assuming uniform scaling for X and Y
+        const stagePos = stage.position();
+    
+        // Adjusting for the stage's position and scale
+        let x = (pointerPosition.x - stagePos.x) / scale;
+        let y = (pointerPosition.y - stagePos.y) / scale;
+    
+        // Snap to grid if enabled
+        if (StateManager._snapToGridEnabled) {
+            const gridSpacing = 50; // Define your grid spacing value here
+    
+            // No need to normalize the coordinates here since they're already in "stage space"
+            x = Math.round(x / gridSpacing) * gridSpacing;
+            y = Math.round(y / gridSpacing) * gridSpacing;
+        }
+    
         const newStateWrapper = new NodeWrapper(x, y);
-
         StateManager._nodeWrappers.push(newStateWrapper);
-
-        StateManager._nodeLayer.add(newStateWrapper.nodeGroup);
-
+        StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
+    
         if (StateManager._startNode === null) {
             StateManager.startNode = newStateWrapper;
         }
+    
+        StateManager._nodeLayer?.draw();
     }
+    
+    
+
+    public static addTransition(transition: TransitionWrapper) {
+        console.log('Adding transition to the array');
+        StateManager._transitionWrappers.push(transition);
+      }
 
     public static set startNode(node: NodeWrapper | null) {
         if (StateManager._startNode) {
@@ -165,14 +292,22 @@ export default class StateManager {
 
     }
 
-    private static updateStartNodePosition() {
+    public static updateStartNodePosition() {
         StateManager._startStateLine.absolutePosition(StateManager._startNode.nodeGroup.absolutePosition());
     }
 
     private static onKeyDown(ev: KeyboardEvent) {
-        if ((ev.code === "Backspace" || ev.code === "Delete") && ev.ctrlKey) {
+        //based on the ignore shortcuts implementation in index.tsx
+        const n = document.activeElement.nodeName;
+        if (n === 'INPUT' || n === 'TEXTAREA')
+        {
+            return;
+        }
+        if (ev.code === "Backspace" || ev.code === "Delete") 
+        {
             StateManager.deleteAllSelectedObjects();
         }
+
     }
 
     public static startTentativeTransition(sourceNode: NodeWrapper) {
@@ -182,34 +317,44 @@ export default class StateManager {
     }
 
     public static updateTentativeTransitionHead(x: number, y: number) {
+        if (!StateManager._stage || !StateManager._tentativeTransitionSource || !StateManager._tentConnectionLine) return;
+    
+        // Get the current scale of the stage
+        const scale = StateManager._stage.scaleX();
+    
+        // Get the source node's absolute position
         let srcPos = StateManager._tentativeTransitionSource.nodeGroup.absolutePosition();
+    
         if (StateManager.tentativeTransitionTarget === null) {
-            let xDelta = x - srcPos.x;
-            let yDelta = y - srcPos.y;
+            // Calculate the delta, taking the scale into account
+            let xDelta = (x - srcPos.x) / scale;
+            let yDelta = (y - srcPos.y) / scale;
+    
+            // Update the points for the tentative transition line
             StateManager._tentConnectionLine.points([0, 0, xDelta, yDelta]);
-            return;
+        } else {
+            
+            let dstPos = StateManager.tentativeTransitionTarget.nodeGroup.absolutePosition();
+            
+            let xDestRelativeToSrc = (dstPos.x - srcPos.x) / scale;
+            let yDestRelativeToSrc = (dstPos.y - srcPos.y) / scale;
+    
+            let magnitude = Math.sqrt(xDestRelativeToSrc * xDestRelativeToSrc + yDestRelativeToSrc * yDestRelativeToSrc);
+            
+            let newMag = (NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding);
+            let xUnitTowardsSrc = xDestRelativeToSrc / magnitude * newMag;
+            let yUnitTowardsSrc = yDestRelativeToSrc / magnitude * newMag;
+    
+            // Update the arrow points to end just before the target node, adjusted for scale
+            StateManager._tentConnectionLine.points([0, 0, xDestRelativeToSrc - xUnitTowardsSrc, yDestRelativeToSrc - yUnitTowardsSrc]);
         }
-
-        // There's a node being targeted, so let's find the point the arrow
-        // should point to!
-        let dstPos = StateManager.tentativeTransitionTarget.nodeGroup.absolutePosition();
-
-        let xDestRelativeToSrc = dstPos.x - srcPos.x;
-        let yDestRelativeToSrc = dstPos.y - srcPos.y;
-
-        let magnitude = Math.sqrt(xDestRelativeToSrc * xDestRelativeToSrc + yDestRelativeToSrc * yDestRelativeToSrc);
-
-        let newMag = NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding;
-        let xUnitTowardsSrc = xDestRelativeToSrc / magnitude * newMag;
-        let yUnitTowardsSrc = yDestRelativeToSrc / magnitude * newMag;
-
-        // Ok, now we have a vector relative to the destination.
-        // We need to get this vector relative to the source.
-
-        StateManager._tentConnectionLine.points([0, 0, xDestRelativeToSrc - xUnitTowardsSrc, yDestRelativeToSrc - yUnitTowardsSrc]);
     }
 
+    
+    
     public static endTentativeTransition() {
+
+
         if (StateManager._tentativeTransitionSource !== null && StateManager.tentativeTransitionTarget !== null) {
             const newTransitionWrapper = new TransitionWrapper(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
             StateManager._transitionWrappers.push(newTransitionWrapper);
@@ -272,12 +417,11 @@ export default class StateManager {
                 }
             });
         });
-
         // Keep transitions that aren't in the selected objects, AND aren't dependent on selected objects
-        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
+        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => !StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
 
         // Next, delete all selected nodes
-        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
+        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => !StateManager._selectedObjects.includes(i));
 
         StateManager._selectedObjects.forEach((obj) => obj.deleteKonvaObjects());
         transitionsDependentOnDeletedNodes.forEach((obj) => obj.deleteKonvaObjects());
@@ -289,6 +433,37 @@ export default class StateManager {
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
     }
+
+    // method to zoom in or out when the mouse wheel is scrolled.
+    private static handleWheelEvent(ev: any) {
+        ev.evt.preventDefault();
+        var oldScale = StateManager._stage.scaleX();
+    
+        var pointer = StateManager._stage.getPointerPosition();
+    
+        var mousePointer = {
+            x: (pointer.x - StateManager._stage.x()) / oldScale,
+            y: (pointer.y - StateManager._stage.y()) / oldScale,
+        };
+    
+        var newScale = ev.evt.deltaY > 0 ? oldScale * 0.9 : oldScale * 1.1;
+        StateManager._stage.scale({ x: newScale, y: newScale });
+    
+        var newPos = {
+            x: pointer.x - mousePointer.x * newScale,
+            y: pointer.y - mousePointer.y * newScale,
+        };
+        StateManager._stage.position(newPos);
+        StateManager._stage.batchDraw();
+        StateManager.drawGrid();
+    }
+
+    public static areAllLabelsUnique(): boolean {
+        const labels = StateManager._nodeWrappers.map(node => node.labelText);
+        const uniqueLabels = new Set(labels);
+        return labels.length === uniqueLabels.size;
+    }
+
     
     public static set alphabet(newAlphabet: Array<TokenWrapper>) {
         const oldAlphabet = StateManager._alphabet;
@@ -376,7 +551,7 @@ export default class StateManager {
             const isEpsilonTransition = trans.isEpsilonTransition;
             const tokens = trans.tokens.map(tokID => StateManager._alphabet.find(tok => tok.id === tokID));
             const newTrans = new TransitionWrapper(src, dest, isEpsilonTransition, tokens);
-
+            
             StateManager._transitionWrappers.push(newTrans);
             StateManager._transitionLayer.add(newTrans.konvaGroup);
         })
@@ -415,6 +590,14 @@ export default class StateManager {
 
         this._tentConnectionLine.fill(this.colorScheme.tentativeTransitionArrowColor);
         this._tentConnectionLine.stroke(this.colorScheme.tentativeTransitionArrowColor);
+
+        const gridLayer = StateManager._stage.findOne('.gridLayer');
+        if(gridLayer){
+            gridLayer.destroy() ;
+        }
+        StateManager.drawGrid();
+
+        StateManager._stage.draw();
     }
 
     public static get useDarkMode() {

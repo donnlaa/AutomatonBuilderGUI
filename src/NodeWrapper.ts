@@ -4,6 +4,7 @@ import { Tool } from './Tool';
 import { Vector2d } from 'konva/lib/types';
 import SelectableObject from './SelectableObject';
 import { v4 as uuidv4 } from 'uuid';
+import TransitionWrapper from './TransitionWrapper';
 
 export default class NodeWrapper extends SelectableObject {
   public static readonly NodeRadius = 30;
@@ -24,7 +25,7 @@ export default class NodeWrapper extends SelectableObject {
 
   private _isAcceptNode: boolean = false;
 
-  private _labelText: string = "State";
+  private _labelText: string = "state";
 
   private readonly _id: string
   public get id(): string {
@@ -44,7 +45,7 @@ export default class NodeWrapper extends SelectableObject {
     super();
     this._id = id ?? uuidv4();
 
-    this._labelText = label ?? `State`;
+    this._labelText = label ?? `q${StateManager._nextStateId++}`; // This becomes the label;
 
     this.nodeGroup = new Konva.Group({ x: x, y: y });
 
@@ -262,20 +263,49 @@ export default class NodeWrapper extends SelectableObject {
   }
 
   public onDragEnd() {
-    if (StateManager.currentTool == Tool.States) {
+    if (StateManager.currentTool === Tool.States) {
+    } 
+    else if (StateManager.currentTool === Tool.Select && StateManager.isSnapToGridEnabled()) {
+       
+        // Get the node's current position relative to the stage
+        const nodePos = this.nodeGroup.position();
 
+        // Snap the position to the nearest grid points
+        const gridCellSize = 50;
+        let snappedX = Math.round(nodePos.x / gridCellSize) * gridCellSize;
+        let snappedY = Math.round(nodePos.y / gridCellSize) * gridCellSize;
+
+        // Adjust the snapped position by the scale to get the final position on the stage
+        this.nodeGroup.position({
+            x: snappedX,
+            y: snappedY
+        });
+        
+        StateManager.updateStartNodePosition();
+
+        // update all related transitions
+        StateManager.transitions.forEach(transition => {
+          if (transition.involvesNode(this)) {
+            transition.updatePoints();
+          }
+        });
+        // Redraw the layer to reflect the changes
+        this.nodeGroup.getLayer()?.batchDraw();
+        
+    } else if (StateManager.currentTool === Tool.Transitions) {
+        // Handling specific to ending a tentative transition
+        StateManager.endTentativeTransition();
+    } else if (StateManager.currentTool === Tool.Select) {
+        // Deselect and remove shadow effects from all selected nodes
+        StateManager.selectedObjects.forEach((obj) => {
+            if (obj instanceof NodeWrapper) {
+                obj.disableShadowEffects();
+            }
+        });
     }
-    else if (StateManager.currentTool === Tool.Transitions) {
-      StateManager.endTentativeTransition();
-    }
-    else if (StateManager.currentTool === Tool.Select) {
-      StateManager.selectedObjects.forEach((obj) => {
-        if (obj instanceof NodeWrapper) {
-          obj.disableShadowEffects();
-        }
-      });
-    }
-  }
+}
+
+
 
   public konvaObject(): Konva.Node {
     return this.nodeGroup;
@@ -293,7 +323,7 @@ export default class NodeWrapper extends SelectableObject {
 
   public updateColorScheme() {
     this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
-
+    
     
     this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
     this.nodeAcceptCircle.stroke(StateManager.colorScheme.nodeAcceptStrokeColor);

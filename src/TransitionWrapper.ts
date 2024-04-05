@@ -18,6 +18,10 @@ export default class TransitionWrapper extends SelectableObject {
     public konvaGroup: Konva.Group;
 
     private _sourceNode: NodeWrapper;
+    transitionId: string;
+    isCurved: boolean;
+    isDelete: boolean;
+    priority: string;
     public get sourceNode() { return this._sourceNode; }
 
     private _destNode: NodeWrapper;
@@ -33,15 +37,44 @@ export default class TransitionWrapper extends SelectableObject {
     }
 
     constructor(sourceNode: NodeWrapper, destNode: NodeWrapper, isEpsilonTransition: boolean | null = null, tokens: Array<TokenWrapper> | Set<TokenWrapper> | null = null) {
+        console.log('inside the constructor');
         super();
         this._id = uuidv4();
         this._sourceNode = sourceNode;
         this._destNode = destNode;
         this._tokens = new Set(tokens) ?? new Set<TokenWrapper>();
         this._isEpsilonTransition = isEpsilonTransition ?? false;
+        this.isDelete = false;
+        
+        const existingTransitions = StateManager.transitions.find(t =>
+        //    (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
+            (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id)
+        );
+        const existingTransition = StateManager.transitions.find(t =>
+            (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id)
+        );
+        if(existingTransition)
+        {
+            this.isDelete =true;
+            StateManager.deselectAllObjects();
+            StateManager.selectObject(existingTransition);
+        }
+        
 
+        
+        if (!existingTransitions) 
+        {
+            this.priority = 'straight';
+        } 
+        else 
+        {
+            existingTransitions.priority = 'curve';
+            this.priority = 'curve';
+            existingTransitions.updatePoints();
+        }
+        
         this.konvaGroup = new Konva.Group();
-
+        
         this.arrowObject = new Konva.Arrow({
             x: 0,
             y: 0,
@@ -71,15 +104,20 @@ export default class TransitionWrapper extends SelectableObject {
             fill: StateManager.colorScheme.transitionLabelColor,
         });
 
+if (this.isDelete){
+
+}
+else{
         this.konvaGroup.add(this.arrowObject);
         this.konvaGroup.add(this.labelCenterDebugObject);
         this.konvaGroup.add(this.labelObject);
-
+}
         this.updatePoints();
 
         this.konvaGroup.on('click', (ev) => this.onClick.call(this, ev));
         this._sourceNode.nodeGroup.on('move.transition', (ev) => this.updatePoints.call(this));
         this._destNode.nodeGroup.on('move.transition', (ev) => this.updatePoints.call(this));
+        this.konvaGroup.on('click', (ev) => this.onClick.call(this, ev));
     }
 
     private resetLabel() {
@@ -94,79 +132,108 @@ export default class TransitionWrapper extends SelectableObject {
 
     public updatePoints() {
         this.resetLabel();
-
-        // If source node and destination node are the same,
-        // then the transition arrow should not do its usual thing.
-        // Instead, it should loop up and around
-        if (this._sourceNode == this._destNode) {
-            console.log('source node and dest node are the same!')
-            let srcPos = this._sourceNode.nodeGroup.position();
-            const ANGLE = 60.0 * (Math.PI / 180.0);
-            const DIST = 30;
-
-
-            const centerPtX = srcPos.x;
-            const centerPtY = srcPos.y - NodeWrapper.NodeRadius - DIST * 1.5;
-
-            let pointsArray = [
-                srcPos.x + NodeWrapper.NodeRadius * Math.cos(ANGLE),
-                srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE),
-
-                srcPos.x + NodeWrapper.NodeRadius * Math.cos(ANGLE) + DIST * Math.cos(ANGLE),
-                srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - DIST * Math.sin(ANGLE),
-
-                centerPtX,
-                centerPtY,
-
-                srcPos.x - NodeWrapper.NodeRadius * Math.cos(ANGLE) - DIST * Math.cos(ANGLE),
-                srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - DIST * Math.sin(ANGLE),
-
-                srcPos.x - NodeWrapper.NodeRadius * Math.cos(ANGLE) - TransitionWrapper.ExtraTransitionArrowPadding * Math.cos(ANGLE),
-                srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - TransitionWrapper.ExtraTransitionArrowPadding * Math.sin(ANGLE)
-            ];
-            this.arrowObject.points(pointsArray);
-            this.arrowObject.tension(0);
-
-            this.labelObject.position({x: centerPtX, y: centerPtY});
-            this.labelCenterDebugObject.position({x: centerPtX, y: centerPtY});
-
-            return;
+    
+        if (this._sourceNode === this._destNode) {
+            this.handleSameSourceAndDest();
+        } else {
+            const srcPos = this._sourceNode.nodeGroup.position();
+            const dstPos = this._destNode.nodeGroup.position();
+            
+            if (this.priority === 'curve') {
+                this.handleCurvePriority(srcPos, dstPos);
+            } else {
+                this.handleDefaultPriority(srcPos, dstPos);
+            }
+            if(this.isDelete)
+            {
+            this.deleteKonvaObjects;
+            }
         }
-
-        // The source and destination are different, so draw the
-        // arrow from one to the other.
-        let srcPos = this._sourceNode.nodeGroup.position();
-        let dstPos = this._destNode.nodeGroup.position();
-
-        let xDestRelativeToSrc = dstPos.x - srcPos.x;
-        let yDestRelativeToSrc = dstPos.y - srcPos.y;
-
-        let magnitude = Math.sqrt(xDestRelativeToSrc * xDestRelativeToSrc + yDestRelativeToSrc * yDestRelativeToSrc);
-
-        let newMag = NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding;
-        let xUnitTowardsSrc = xDestRelativeToSrc / magnitude * newMag;
-        let yUnitTowardsSrc = yDestRelativeToSrc / magnitude * newMag;
-
-        this.arrowObject.points([
-            srcPos.x,
-            srcPos.y,
-            dstPos.x - xUnitTowardsSrc,
-            dstPos.y - yUnitTowardsSrc
-        ]);
-
-        this.arrowObject.tension(0);
-
-        // calculate center of transition line, for label
-        const xAvg = ((srcPos.x + xUnitTowardsSrc) + (dstPos.x - xUnitTowardsSrc)) / 2;
-        const yAvg = ((srcPos.y + yUnitTowardsSrc) + (dstPos.y - yUnitTowardsSrc)) / 2;
-
-        const xCenter = xAvg;// - this.labelObject.getTextWidth() / 2;
-        const yCenter = yAvg;
-        this.labelObject.x(xCenter);
-        this.labelObject.y(yCenter);
-
-        this.labelCenterDebugObject.position({x: xCenter, y: yCenter});
     }
+    
+    handleSameSourceAndDest() {
+        console.log('source node and dest node are the same!');
+        const srcPos = this._sourceNode.nodeGroup.position();
+        const ANGLE = 60.0 * (Math.PI / 180.0);
+        const DIST = 30;
+    
+        const centerPtX = srcPos.x;
+        const centerPtY = srcPos.y - NodeWrapper.NodeRadius - DIST * 1.5;
+    
+        const pointsArray = [
+            srcPos.x + NodeWrapper.NodeRadius * Math.cos(ANGLE),
+            srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE),
+            srcPos.x + NodeWrapper.NodeRadius * Math.cos(ANGLE) + DIST * Math.cos(ANGLE),
+            srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - DIST * Math.sin(ANGLE),
+            centerPtX,
+            centerPtY,
+            srcPos.x - NodeWrapper.NodeRadius * Math.cos(ANGLE) - DIST * Math.cos(ANGLE),
+            srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - DIST * Math.sin(ANGLE),
+            srcPos.x - NodeWrapper.NodeRadius * Math.cos(ANGLE) - TransitionWrapper.ExtraTransitionArrowPadding * Math.cos(ANGLE),
+            srcPos.y - NodeWrapper.NodeRadius * Math.sin(ANGLE) - TransitionWrapper.ExtraTransitionArrowPadding * Math.sin(ANGLE)
+        ];
+        this.updateArrow(pointsArray, 0);
+        this.labelObject.position({ x: centerPtX, y: centerPtY-20});
+        this.labelCenterDebugObject.position({ x: centerPtX, y: centerPtY});
+    }
+    
+    handleCurvePriority(srcPos: { x: number, y: number }, dstPos: { x: number, y: number }) {
+        console.log('Curved arrow logic executed!');
+        const angle = Math.atan2(dstPos.y - srcPos.y, dstPos.x - srcPos.x);
+        const curveSize = 40;
+        const textOffset = curveSize + 20;
+        const midPoint = { x: (srcPos.x + dstPos.x) / 2, y: (srcPos.y + dstPos.y) / 2 };
+        const normalVectorXComponent = Math.cos(angle + Math.PI / 2);
+        const normalVectorYComponent = Math.sin(angle + Math.PI / 2);
+    
+        const pointsArray = [
+            srcPos.x + NodeWrapper.NodeRadius * Math.cos(angle + Math.PI / 8),
+            srcPos.y + NodeWrapper.NodeRadius * Math.sin(angle + Math.PI / 8),
+            midPoint.x + curveSize * normalVectorXComponent,
+            midPoint.y + curveSize * normalVectorYComponent,
+            dstPos.x - (NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding) * Math.cos(angle - Math.PI / 8),
+            dstPos.y - (NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding) * Math.sin(angle - Math.PI / 8)
+        ];
+    
+        this.updateArrow(pointsArray, 0.5);
+        this.updateLabelPosition(midPoint.x + textOffset * normalVectorXComponent, midPoint.y + textOffset * normalVectorYComponent);
+        this.updateLabelCenterDebugPosition(midPoint.x + curveSize * normalVectorXComponent, midPoint.y + curveSize * normalVectorYComponent);
+    }
+    
+    handleDefaultPriority(srcPos: { x: number, y: number }, dstPos: { x: number, y: number }) {
+        const unitVector = this.calculateUnitVectorTowardsSrc(srcPos, dstPos);
+        const xAvg = ((srcPos.x + unitVector.x) + (dstPos.x - unitVector.x)) / 2;
+        const yAvg = ((srcPos.y + unitVector.y) + (dstPos.y - unitVector.y)) / 2;
+        const midPoint = { x: (srcPos.x + dstPos.x) / 2, y: (srcPos.y + dstPos.y) / 2 };
+        this.updateArrow([srcPos.x, srcPos.y, dstPos.x - unitVector.x, dstPos.y - unitVector.y], 0);
+        this.updateLabelPosition(xAvg, yAvg);
+        this.updateLabelCenterDebugPosition(xAvg, yAvg);
+    }
+    
+    calculateUnitVectorTowardsSrc(srcPos: { x: number, y: number }, dstPos: { x: number, y: number }) {
+        const xDestRelativeToSrc = dstPos.x - srcPos.x;
+        const yDestRelativeToSrc = dstPos.y - srcPos.y;
+        const magnitude = Math.sqrt(xDestRelativeToSrc * xDestRelativeToSrc + yDestRelativeToSrc * yDestRelativeToSrc);
+        const newMag = NodeWrapper.NodeRadius + TransitionWrapper.ExtraTransitionArrowPadding;
+        const xUnitTowardsSrc = xDestRelativeToSrc / magnitude * newMag;
+        const yUnitTowardsSrc = yDestRelativeToSrc / magnitude * newMag;
+    
+        return { x: xUnitTowardsSrc, y: yUnitTowardsSrc };
+    }
+    
+    updateArrow(pointsArray: number[], tension: number) {
+        this.arrowObject.points(pointsArray);
+        this.arrowObject.tension(tension);
+    }
+    
+    updateLabelPosition(x: number, y: number) {
+        this.labelObject.position({ x, y });
+    }
+    
+    updateLabelCenterDebugPosition(x: number, y: number) {
+        this.labelCenterDebugObject.position({ x, y });
+    }
+    
 
     public involvesNode(node: NodeWrapper): boolean {
         return this._sourceNode === node || this._destNode === node;
