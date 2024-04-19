@@ -352,14 +352,24 @@ export default class StateManager {
 
     
     
-    public static endTentativeTransition() {
-
-
-        if (StateManager._tentativeTransitionSource !== null && StateManager.tentativeTransitionTarget !== null) {
+    public static endTentativeTransition() 
+    {
+        if (StateManager._tentativeTransitionSource !== null && StateManager.tentativeTransitionTarget !== null) 
+            {
+                const existingTransition = StateManager.transitions.find(t =>
+                    (t.sourceNode.id === StateManager._tentativeTransitionSource.id && t.destNode.id === StateManager.tentativeTransitionTarget.id));
+            if(existingTransition)
+            {
+            StateManager.deselectAllObjects();
+             StateManager.selectObject(existingTransition);
+            }
+            else
+            {
             const newTransitionWrapper = new TransitionWrapper(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
             StateManager._transitionWrappers.push(newTransitionWrapper);
             StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
             StateManager._transitionLayer.draw();
+            }
         }
 
         StateManager._tentativeTransitionSource?.disableShadowEffects();
@@ -369,6 +379,7 @@ export default class StateManager {
         StateManager._tentativeTransitionTarget = null;
         StateManager._tentConnectionLine.visible(false);
     }
+
 
     public static get tentativeTransitionInProgress() {
         return StateManager._tentativeTransitionSource !== null;
