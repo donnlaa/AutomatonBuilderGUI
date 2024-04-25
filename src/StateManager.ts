@@ -606,6 +606,13 @@ export default class StateManager {
             StateManager._nodeLayer.add(newState.nodeGroup);
         });
 
+        acceptStates.forEach(state => {
+            const node = StateManager._nodeWrappers.find(n => n.id === state);
+            if (node) {
+                node.isAcceptNode = true;
+            }
+        })
+
         // Load the alphabet
         alphabet.forEach(tok => {
             const newTok = new TokenWrapper(tok.symbol, tok.id);
@@ -630,7 +637,7 @@ export default class StateManager {
             console.error('Start state not found!!');
         }
         else {
-            StateManager._startNode = startNodeObj[0];
+            StateManager.startNode = startNodeObj[0];
         }
 
         // Accept states are loaded at the same time as states themselves
