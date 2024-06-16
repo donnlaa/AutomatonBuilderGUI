@@ -6,12 +6,14 @@ import TransitionWrapper from "../../TransitionWrapper";
 import TokenWrapper from "../../TokenWrapper";
 
 interface DetailsBox_TransitionSelectionProps {
-    transitionWrapper: TransitionWrapper
+    transitionWrapper: TransitionWrapper;
+    setLastUpdated: React.Dispatch<React.SetStateAction<number>>;
 }
 
 interface DetailsBox_TransitionTokenCheckBoxProps {
-    transitionWrapper: TransitionWrapper
-    tokenWrapper: TokenWrapper
+    transitionWrapper: TransitionWrapper;
+    tokenWrapper: TokenWrapper;
+    setLastUpdated: React.Dispatch<React.SetStateAction<number>>;
 }
 
 function DetailsBox_TransitionTokenCheckBox(props: DetailsBox_TransitionTokenCheckBoxProps) {
@@ -26,6 +28,7 @@ function DetailsBox_TransitionTokenCheckBox(props: DetailsBox_TransitionTokenChe
         else {
             transition.removeToken(token);
         }
+        props.setLastUpdated(new Date().getTime());
     }, [tokenIsIncluded]);
 
     return (
@@ -46,6 +49,7 @@ export default function DetailsBox_TransitionSelection(props: DetailsBox_Transit
 
     useEffect(() => {
         tw.isEpsilonTransition = isEpsilonTransition;
+        props.setLastUpdated(new Date().getTime());
     }, [isEpsilonTransition]);
 
     return (
@@ -59,7 +63,7 @@ export default function DetailsBox_TransitionSelection(props: DetailsBox_Transit
                 <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={isEpsilonTransition} onChange={e => setEpsilonTransition(e.target.checked)}></input>
                 <label htmlFor="is-epsilon-transition">ε</label>
             </div>
-            {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transitionWrapper={tw} tokenWrapper={token} />)}
+            {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transitionWrapper={tw} tokenWrapper={token} setLastUpdated={props.setLastUpdated}/>)}
         </div>
     );
 }

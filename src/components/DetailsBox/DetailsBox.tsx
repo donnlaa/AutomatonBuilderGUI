@@ -13,6 +13,7 @@ interface DetailsBoxProps {
   selection: Array<SelectableObject>;
   startNode: NodeWrapper;
   setStartNode: React.Dispatch<React.SetStateAction<NodeWrapper>>;
+  setLastUpdated: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export default function DetailsBox(props: DetailsBoxProps) {
@@ -35,7 +36,7 @@ export default function DetailsBox(props: DetailsBoxProps) {
         />
       );
     } else if (item instanceof TransitionWrapper) {
-      return <DetailsBox_TransitionSelection key={item.id} transitionWrapper={item} />;
+      return <DetailsBox_TransitionSelection key={item.id} transitionWrapper={item} setLastUpdated={props.setLastUpdated}/>;
     }
     return <div key={`unhandled-${index}`}>Unhandled item type</div>;
   });
