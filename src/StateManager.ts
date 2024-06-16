@@ -6,6 +6,10 @@ import SelectableObject from "./SelectableObject";
 import TokenWrapper from "./TokenWrapper";
 import { ChangeEvent, ChangeEventHandler } from "react";
 import { LightColorScheme, DarkColorScheme, ColorScheme } from "./ColorSchemes";
+import DFA from "automaton-kit/lib/dfa/DFA";
+import DFATransition from "automaton-kit/lib/dfa/DFATransition";
+import DFAState from "automaton-kit/lib/dfa/DFAState";
+import { convertIDtoLabelOrSymbol } from "./utilities/AutomatonUtilities";
 
 export default class StateManager {
     static _nextStateId = 0;
@@ -555,12 +559,42 @@ export default class StateManager {
         return [...StateManager._alphabet];
     }
 
+    public static get dfa() {
+        let outputDFA = new DFA();
+        const stateManagerData = StateManager.toJSON();
+        outputDFA.inputAlphabet = stateManagerData.alphabet.map((s) => s.symbol);
+        outputDFA.states = stateManagerData.states.map((s) => new DFAState(s.label));
+        outputDFA.acceptStates = stateManagerData.acceptStates.map((s) => {
+            const label = convertIDtoLabelOrSymbol(s, stateManagerData);
+            return outputDFA.states.find((state) => state.label === label);
+        });
+
+        outputDFA.startState = outputDFA.states.find((s) => s.label === convertIDtoLabelOrSymbol(stateManagerData.startState, stateManagerData));
+
+
+        outputDFA.transitions = stateManagerData.transitions.flatMap((t) =>
+            t.tokens.map((tokenID) => {
+                const sourceLabel = convertIDtoLabelOrSymbol(t.source, stateManagerData);
+                const tokenSymbol = convertIDtoLabelOrSymbol(tokenID, stateManagerData);
+                const destLabel = convertIDtoLabelOrSymbol(t.dest, stateManagerData);
+
+                return new DFATransition(
+                    outputDFA.states.find((s) => s.label === sourceLabel),
+                    tokenSymbol,
+                    outputDFA.states.find((s) => s.label === destLabel)
+                );
+            })
+        );
+
+        return outputDFA;
+    }
+
     public static toJSON() {
         return {
             states: StateManager._nodeWrappers.map(node => node.toJSON()),
             alphabet: StateManager._alphabet.map(tok => tok.toJSON()),
             transitions: StateManager._transitionWrappers.map(trans => trans.toJSON()),
-            startState: StateManager._startNode.id,
+            startState: StateManager._startNode != null ? StateManager._startNode.id : null,
             acceptStates: StateManager._nodeWrappers.filter(node => node.isAcceptNode).map(node => node.id)
         };
     }
