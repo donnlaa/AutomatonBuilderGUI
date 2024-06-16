@@ -1,6 +1,3 @@
-import DFAState from 'automaton-kit/lib/dfa/DFAState';
-import DFA from 'automaton-kit/lib/dfa/DFA';
-import DFATransition from 'automaton-kit/lib/dfa/DFATransition';
 import DFARunner, { DFARunnerStatus } from 'automaton-kit/lib/dfa/DFARunner';
 import StateManager from '../StateManager';
 
@@ -27,73 +24,8 @@ import StateManager from '../StateManager';
 //     acceptStates: string[];
 // }
 
-function convertIDtoLabelOrSymbol(id: string, stateManagerData: any): string | null {
-    // Check if the ID matches a state ID
-    const state = stateManagerData.states.find((s: any) => s.id === id);
-    if (state) {
-        return state.label;
-    }
-
-    // Check if the ID matches a symbol ID in the alphabet
-    const symbol = stateManagerData.alphabet.find((a: any) => a.id === id);
-    if (symbol) {
-        return symbol.symbol;
-    }
-
-    // ID not found in states or alphabet
-    return null;
-}
-
 export function testStringOnAutomata(testString: string): string {
-    let myDFA = new DFA();
-    const stateManagerData = StateManager.toJSON();
-
-    myDFA.inputAlphabet = StateManager.toJSON().alphabet.map((s) => s.symbol);
-    myDFA.states = StateManager.toJSON().states.map((s) => new DFAState(s.label));
-    myDFA.acceptStates = StateManager.toJSON().acceptStates.map((s) => {
-        const label = convertIDtoLabelOrSymbol(s, stateManagerData);
-        return myDFA.states.find((state) => state.label === label);
-    });
-
-    myDFA.startState = myDFA.states.find((s) => s.label === convertIDtoLabelOrSymbol(stateManagerData.startState, stateManagerData));
-
-    
-    myDFA.transitions = stateManagerData.transitions.flatMap((t) =>
-    t.tokens.map((tokenID) => {
-        const sourceLabel = convertIDtoLabelOrSymbol(t.source, stateManagerData);
-        const tokenSymbol = convertIDtoLabelOrSymbol(tokenID, stateManagerData);
-        const destLabel = convertIDtoLabelOrSymbol(t.dest, stateManagerData);
-
-        return new DFATransition(
-            myDFA.states.find((s) => s.label === sourceLabel),
-            tokenSymbol,
-            myDFA.states.find((s) => s.label === destLabel)
-        );
-    })
-    );
-
-    console.log(myDFA);
-    
-// let runner = new DFARunner(myDFA, testString.split(''));
-
-console.log('Testing string:', testString);
-/*
-// Iterate over each character in the test string
-for (let i = 0; i < testString.length; i++) {
-    // Process the current character
-    runner.runStep();
-    
-    // Log the current state of the runner
-    console.log(`After processing '${testString[i]}':`, runner.getStatus());
-}
-
-// After running through all characters, check the final status
-let result = runner.getStatus();
-
-// Log the final status of the DFA runner
-console.log('Final status:', result);
-*/
-
+    let myDFA = StateManager.dfa;
     let runner = new DFARunner(myDFA, testString.split(''));
     runner.runUntilConclusion();
     let result = runner.getStatus();
