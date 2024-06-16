@@ -91,6 +91,17 @@ function App() {
         StateManager.useDarkMode = useDarkMode;
     }, [useDarkMode]);
 
+    
+
+    // Create a DFA from the current state, and get the errors from it
+    let dfa = StateManager.dfa;
+    let dfaErrors = dfa.getErrors();
+    let errorBoxes = dfaErrors.map(err => {
+        return (<InformationBox infoBoxType={InformationBoxType.Error}>
+            {err.errorString()}
+        </InformationBox>)
+    });
+
     return (
         <div className={useDarkMode ? 'dark' : ''}>
             <NodeView />
@@ -102,6 +113,8 @@ function App() {
                             startNode={startNode}
                             setStartNode={setStartNode}
                         />
+
+                        {errorBoxes}
 
                         {/* Example error message boxes commented out */}
                         {/*
