@@ -604,12 +604,9 @@ export default class StateManager {
                 });
             }
         });
-
-        console.log('alphabet is', StateManager._alphabet);
     }
 
     public static get alphabet() {
-        console.log('alphabet is', StateManager._alphabet);
         return [...StateManager._alphabet];
     }
 
