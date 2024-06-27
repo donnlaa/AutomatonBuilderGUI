@@ -10,6 +10,7 @@ import DFA from "automaton-kit/lib/dfa/DFA";
 import DFATransition from "automaton-kit/lib/dfa/DFATransition";
 import DFAState from "automaton-kit/lib/dfa/DFAState";
 import { convertIDtoLabelOrSymbol } from "./utilities/AutomatonUtilities";
+import UndoRedoManager, { Action, ActionData } from "./UndoRedoManager";
 
 export default class StateManager {
     static _nextStateId = 0;
@@ -260,15 +261,28 @@ export default class StateManager {
             y = Math.round(y / gridSpacing) * gridSpacing;
         }
 
-        const newStateWrapper = new NodeWrapper(x, y);
-        StateManager._nodeWrappers.push(newStateWrapper);
-        StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
+        let createStateForward = (data: CreateNodeActionData) => {
+            const newStateWrapper = new NodeWrapper(x, y);
+            StateManager._nodeWrappers.push(newStateWrapper);
+            StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
 
-        if (StateManager._startNode === null) {
-            StateManager.startNode = newStateWrapper;
-        }
+            if (StateManager._startNode === null) {
+                StateManager.startNode = newStateWrapper;
+            }
 
-        StateManager._nodeLayer?.draw();
+            StateManager._nodeLayer?.draw();
+
+            data.labelText = newStateWrapper.labelText;
+            data.nodeWrapper = newStateWrapper;
+        };
+
+        let createStateBackward = (data: CreateNodeActionData) => {
+            // Delete the state and all of its transitions.
+            this.deleteNode(data.nodeWrapper);
+        };
+
+        let createStateAction = new Action("createState", createStateForward, createStateBackward, {'x': x, 'y': y, "nodeWrapper": null});
+        UndoRedoManager.pushAction(createStateAction);
     }
 
 
@@ -306,10 +320,23 @@ export default class StateManager {
         if (n === 'INPUT' || n === 'TEXTAREA') {
             return;
         }
+
         if (ev.code === "Backspace" || ev.code === "Delete") {
             StateManager.deleteAllSelectedObjects();
+            return;
         }
 
+        // https://stackoverflow.com/a/77837006
+        if ((ev.metaKey || ev.ctrlKey) && ev.key == "z") {
+            ev.preventDefault();
+
+            if (ev.shiftKey) {
+                UndoRedoManager.redo();
+            } else {
+                UndoRedoManager.undo();
+            }
+            return;
+        }
     }
 
     public static startTentativeTransition(sourceNode: NodeWrapper) {
@@ -417,6 +444,7 @@ export default class StateManager {
 
     public static deleteAllSelectedObjects() {
         // Find all transitions dependent on selected nodes
+        // StateManager._selectedObjects.forEach((obj) => this.deleteNode(obj));
         const nodesToRemove = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
         const transitionsDependentOnDeletedNodes: Array<TransitionWrapper> = [];
         nodesToRemove.forEach((node) => {
@@ -441,6 +469,27 @@ export default class StateManager {
 
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
+    }
+
+    public static deleteNode(node: NodeWrapper) {
+        const transitionsDependentOnDeletedNode: Array<TransitionWrapper> = [];
+        StateManager._transitionWrappers.forEach((trans) => {
+            if (trans.involvesNode(node) && !transitionsDependentOnDeletedNode.includes(trans)) {
+                transitionsDependentOnDeletedNode.push(trans);
+            }
+        });
+
+        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => {
+            !transitionsDependentOnDeletedNode.includes(i);
+        });
+
+        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => node != i);
+        node.deleteKonvaObjects();
+        transitionsDependentOnDeletedNode.forEach((obj) => obj.deleteKonvaObjects());
+
+        if (node == StateManager._startNode) {
+            StateManager.startNode = null;
+        }
     }
 
     // method to zoom in or out when the mouse wheel is scrolled.
@@ -740,4 +789,14 @@ interface SerializedTransition {
     dest: string,
     isEpsilonTransition: boolean,
     tokens: Array<string>
+}
+
+class CreateNodeActionData extends ActionData {
+    public x: number;
+    public y: number;
+    public nodeWrapper: NodeWrapper;
+    public labelText: string;
+
+    // TODO: fix this so it keeps the same label
+    // (maybe move label generation code outside of NodeWrapper constructor)
 }

@@ -1,3 +1,4 @@
+import NodeWrapper from "./NodeWrapper";
 
 export default class UndoRedoManager {
     // The stack we push actions onto and pop off.
@@ -11,7 +12,7 @@ export default class UndoRedoManager {
     private static _stackLocation: number = -1;
 
     public static pushAction(action: Action) {
-        if (this._stack.length == this._stackLocation - 1) {
+        if (this._stackLocation == this._stack.length - 1) {
             // We are at the top of the stack, so we can
             // just add this new action to the top.
             this._stack.push(action);
@@ -20,11 +21,13 @@ export default class UndoRedoManager {
             // need to remove all of the actions from the
             // top down to the current one(??) - may want
             // to double check this.
-            while (this._stack.length > this._stackLocation - 1) {
+            while (this._stack.length > this._stackLocation) {
+                console.log(`Stack length is currently ${this._stack.length} but needs to get back to ${this._stackLocation}, so pop one`)
                 this._stack.pop();
             }
             this._stack.push(action);
         }
+        this._stackLocation += 1;
         action.forward();
     }
 
@@ -44,11 +47,32 @@ export default class UndoRedoManager {
         }
         this._stack[this._stackLocation].backward();
         this._stackLocation -= 1;
+        console.log(`Undo completed, stack location is now ${this._stackLocation}/${this._stack.length - 1}`);
     }
 }
 
 export class Action {
     public name: string;
-    public forward: () => void;
-    public backward: () => void;
+    private _forward: (data: ActionData) => void;
+    private _backward: (data: ActionData) => void;
+    private _data: ActionData;
+
+    constructor(name: string, forward: (data: ActionData) => void, backward: (data: ActionData) => void, data: ActionData) {
+        this.name = name;
+        this._forward = forward;
+        this._backward = backward;
+        this._data = data;
+    }
+
+    public forward() {
+        this._forward(this._data);
+        console.log(`Action "${this.name}" performed forward!`);
+    }
+
+    public backward() {
+        this._backward(this._data);
+        console.log(`Action "${this.name}" performed backward!`);
+    }
 }
+
+export class ActionData {}
