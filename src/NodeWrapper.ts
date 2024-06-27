@@ -41,12 +41,13 @@ export default class NodeWrapper extends SelectableObject {
     }
   }
 
-  constructor(x: number, y: number, label: string | null = null, isAcceptState: boolean | null = null, id: string | null = null) {
+  constructor(label: string, id: string | null = null) {
     super();
     this._id = id ?? uuidv4();
+    this._labelText = label;
+  }
 
-    this._labelText = label ?? `q${StateManager._nextStateId++}`; // This becomes the label;
-
+  public createKonvaObjects(x: number, y: number) {
     this.nodeGroup = new Konva.Group({ x: x, y: y });
 
     // create our shape

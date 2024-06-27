@@ -261,8 +261,9 @@ export default class StateManager {
             y = Math.round(y / gridSpacing) * gridSpacing;
         }
 
+        const newStateWrapper = new NodeWrapper(`q${StateManager._nextStateId++}`);
         let createStateForward = (data: CreateNodeActionData) => {
-            const newStateWrapper = new NodeWrapper(x, y);
+            newStateWrapper.createKonvaObjects(data.x, data.y);
             StateManager._nodeWrappers.push(newStateWrapper);
             StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
 
@@ -277,11 +278,15 @@ export default class StateManager {
         };
 
         let createStateBackward = (data: CreateNodeActionData) => {
-            // Delete the state and all of its transitions.
             this.deleteNode(data.nodeWrapper);
         };
 
-        let createStateAction = new Action("createState", createStateForward, createStateBackward, {'x': x, 'y': y, "nodeWrapper": null});
+        let createStateAction = new Action(
+            "createState",
+            createStateForward,
+            createStateBackward,
+            {'x': x, 'y': y, "nodeWrapper": null}
+        );
         UndoRedoManager.pushAction(createStateAction);
     }
 
@@ -684,7 +689,8 @@ export default class StateManager {
 
         // Load each state
         states.forEach(state => {
-            const newState = new NodeWrapper(state.x, state.y, state.label, acceptStates.includes(state.id), state.id);
+            const newState = new NodeWrapper(state.label, state.id);
+            newState.createKonvaObjects(state.x, state.y);
             StateManager._nodeWrappers.push(newState);
             StateManager._nodeLayer.add(newState.nodeGroup);
         });
