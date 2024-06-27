@@ -21,8 +21,7 @@ export default class UndoRedoManager {
             // need to remove all of the actions from the
             // top down to the current one(??) - may want
             // to double check this.
-            while (this._stack.length > this._stackLocation) {
-                console.log(`Stack length is currently ${this._stack.length} but needs to get back to ${this._stackLocation}, so pop one`)
+            while (this._stack.length > 0 && this._stack.length > this._stackLocation - 1) {
                 this._stack.pop();
             }
             this._stack.push(action);
