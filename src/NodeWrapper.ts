@@ -238,6 +238,8 @@ export default class NodeWrapper extends SelectableObject {
           obj.enableDragDropShadow();
         }
       });
+
+      StateManager.startDragStatesOperation(this.lastPos);
     }
   }
 
@@ -263,6 +265,10 @@ export default class NodeWrapper extends SelectableObject {
     }
   }
 
+  public setPosition(position: Vector2d) {
+    this.nodeGroup.position(position);
+  }
+
   public onDragEnd() {
     if (StateManager.currentTool === Tool.States) {
     } 
@@ -277,7 +283,7 @@ export default class NodeWrapper extends SelectableObject {
         let snappedY = Math.round(nodePos.y / gridCellSize) * gridCellSize;
 
         // Adjust the snapped position by the scale to get the final position on the stage
-        this.nodeGroup.position({
+        this.setPosition({
             x: snappedX,
             y: snappedY
         });
@@ -303,6 +309,8 @@ export default class NodeWrapper extends SelectableObject {
                 obj.disableShadowEffects();
             }
         });
+
+        StateManager.completeDragStatesOperation(this.nodeGroup.position());
     }
 }
 

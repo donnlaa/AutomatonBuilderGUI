@@ -11,11 +11,12 @@ export default class UndoRedoManager {
     // down the stack. 
     private static _stackLocation: number = -1;
 
-    public static pushAction(action: Action) {
+    public static pushAction(action: Action, performForward: boolean = true) {
         if (this._stackLocation == this._stack.length - 1) {
             // We are at the top of the stack, so we can
             // just add this new action to the top.
             this._stack.push(action);
+            this._stackLocation += 1;
         } else {
             // We are not at the top of the stack, so we
             // need to remove all of the actions from the
@@ -25,9 +26,12 @@ export default class UndoRedoManager {
                 this._stack.pop();
             }
             this._stack.push(action);
+            this._stackLocation = this._stack.length - 1;
         }
-        this._stackLocation += 1;
-        action.forward();
+        
+        if (performForward) {
+            action.forward();
+        }
     }
 
     public static redo() {

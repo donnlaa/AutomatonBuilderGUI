@@ -11,6 +11,7 @@ import DFATransition from "automaton-kit/lib/dfa/DFATransition";
 import DFAState from "automaton-kit/lib/dfa/DFAState";
 import { convertIDtoLabelOrSymbol } from "./utilities/AutomatonUtilities";
 import UndoRedoManager, { Action, ActionData } from "./UndoRedoManager";
+import { Vector2d } from "konva/lib/types";
 
 export default class StateManager {
     static _nextStateId = 0;
@@ -764,6 +765,53 @@ export default class StateManager {
     public static get useDarkMode() {
         return this._useDarkMode;
     }
+
+    private static _dragStatesStartPosition: Vector2d | null = null;
+
+    public static startDragStatesOperation(startPos: Vector2d) {
+        this._dragStatesStartPosition = startPos;
+    }
+
+    public static completeDragStatesOperation(finalPos: Vector2d) {
+        let startPos = this._dragStatesStartPosition;
+        let endPos = finalPos;
+        let delta: Vector2d = {x: endPos.x - startPos.x, y: endPos.y - startPos.y};
+
+        let moveStatesForward = (data: MoveStatesActionData) => {
+            data.states.forEach((state) => {
+                state.setPosition({
+                    x: state.nodeGroup.position().x + delta.x,
+                    y: state.nodeGroup.position().y + delta.y
+                });
+
+                if (StateManager.startNode === state) {
+                    this.updateStartNodePosition();
+                }
+            });
+        };
+
+        let moveStatesBackward = (data: MoveStatesActionData) => {
+            data.states.forEach((state) => {
+                state.setPosition({
+                    x: state.nodeGroup.position().x - delta.x,
+                    y: state.nodeGroup.position().y - delta.y
+                });
+
+                if (StateManager.startNode === state) {
+                    this.updateStartNodePosition();
+                }
+            });
+        };
+
+        let moveNodesAction = new Action(
+            "moveStates",
+            moveStatesForward,
+            moveStatesBackward,
+            {delta: delta, states: [...this.selectedObjects]}
+        );
+
+        UndoRedoManager.pushAction(moveNodesAction, false);
+    }
 }
 
 interface SerializedAutomaton {
@@ -799,7 +847,9 @@ class CreateNodeActionData extends ActionData {
     public y: number;
     public nodeWrapper: NodeWrapper;
     public labelText: string;
+}
 
-    // TODO: fix this so it keeps the same label
-    // (maybe move label generation code outside of NodeWrapper constructor)
+class MoveStatesActionData extends ActionData {
+    public delta: Vector2d;
+    public states: Array<NodeWrapper>;
 }
