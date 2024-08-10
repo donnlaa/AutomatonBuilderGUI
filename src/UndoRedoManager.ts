@@ -20,15 +20,14 @@ export default class UndoRedoManager {
         } else {
             // We are not at the top of the stack, so we
             // need to remove all of the actions from the
-            // top down to the current one(??) - may want
-            // to double check this.
-            while (this._stack.length > 0 && this._stack.length > this._stackLocation - 1) {
+            // top down to the current one.
+            while (this._stack.length > 0 && this._stackLocation < this._stack.length - 1) {
                 this._stack.pop();
             }
             this._stack.push(action);
             this._stackLocation = this._stack.length - 1;
         }
-        
+
         if (performForward) {
             action.forward();
         }
@@ -50,7 +49,6 @@ export default class UndoRedoManager {
         }
         this._stack[this._stackLocation].backward();
         this._stackLocation -= 1;
-        console.log(`Undo completed, stack location is now ${this._stackLocation}/${this._stack.length - 1}`);
     }
 }
 
