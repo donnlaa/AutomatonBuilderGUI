@@ -291,6 +291,26 @@ export default class StateManager {
         UndoRedoManager.pushAction(createStateAction);
     }
 
+    public static setNodeName(nodeWrapper: NodeWrapper, newName: string) {
+        let oldName = nodeWrapper.labelText;
+
+        let setNodeNameForward = (data: SetNodeNameActionData) => {
+            data.nodeWrapper.labelText = data.newName;
+        };
+
+        let setNodeNameBackward = (data: SetNodeNameActionData) => {
+            data.nodeWrapper.labelText = data.oldName;
+        };
+
+        let setNodeNameAction = new Action(
+            "setNodeName",
+            setNodeNameForward,
+            setNodeNameBackward,
+            {'oldName': oldName, 'newName': newName, 'nodeWrapper': nodeWrapper}
+        );
+        UndoRedoManager.pushAction(setNodeNameAction);
+    }
+
 
 
     public static addTransition(transition: TransitionWrapper) {
@@ -852,4 +872,10 @@ class CreateNodeActionData extends ActionData {
 class MoveStatesActionData extends ActionData {
     public delta: Vector2d;
     public states: Array<NodeWrapper>;
+}
+
+class SetNodeNameActionData extends ActionData {
+    public oldName: string;
+    public newName: string;
+    public nodeWrapper: NodeWrapper;
 }

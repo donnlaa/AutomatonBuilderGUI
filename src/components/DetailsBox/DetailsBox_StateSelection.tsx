@@ -41,7 +41,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
     const [isAcceptNode, setIsAcceptNode] = useState(nw.isAcceptNode);
 
     useEffect(() => {
-        nw.labelText = nodeLabelText;
+        StateManager.setNodeName(nw, nodeLabelText);
     }, [nodeLabelText]);
 
     useEffect(() => {
