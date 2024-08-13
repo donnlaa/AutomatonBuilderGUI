@@ -311,6 +311,26 @@ export default class StateManager {
         UndoRedoManager.pushAction(setNodeNameAction);
     }
 
+    public static setNodeIsAccept(nodeWrapper: NodeWrapper, isAccept: boolean) {
+        let oldValue = nodeWrapper.isAcceptNode
+
+        let setNodeIsAcceptForward = (data: SetNodeIsAcceptActionData) => {
+            data.nodeWrapper.isAcceptNode = data.newValue;
+        };
+
+        let setNodeIsAcceptBackward = (data: SetNodeIsAcceptActionData) => {
+            data.nodeWrapper.isAcceptNode = data.oldValue;
+        };
+
+        let setNodeIsAcceptAction = new Action(
+            "setNodeIsAccept",
+            setNodeIsAcceptForward,
+            setNodeIsAcceptBackward,
+            {'oldValue': oldValue, 'newValue': isAccept, 'nodeWrapper': nodeWrapper}
+        );
+        UndoRedoManager.pushAction(setNodeIsAcceptAction);
+    }
+
 
 
     public static addTransition(transition: TransitionWrapper) {
@@ -877,5 +897,11 @@ class MoveStatesActionData extends ActionData {
 class SetNodeNameActionData extends ActionData {
     public oldName: string;
     public newName: string;
+    public nodeWrapper: NodeWrapper;
+}
+
+class SetNodeIsAcceptActionData extends ActionData {
+    public oldValue: boolean;
+    public newValue: boolean;
     public nodeWrapper: NodeWrapper;
 }

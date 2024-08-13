@@ -40,12 +40,17 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
     const [nodeLabelText, setLabelText] = useState(nw.labelText);
     const [isAcceptNode, setIsAcceptNode] = useState(nw.isAcceptNode);
 
+    // TODO: These may be triggered, and thus register actions, when the nodes
+    // are clicked even though the user didn't do anything.
+    // To fix this, the functions may need to be called more explicitly from
+    // the onChange callers?
+    // (Maybe we don't need these useEffect calls at all?)
     useEffect(() => {
         StateManager.setNodeName(nw, nodeLabelText);
     }, [nodeLabelText]);
 
     useEffect(() => {
-        nw.isAcceptNode = isAcceptNode;
+        StateManager.setNodeIsAccept(nw, isAcceptNode);
     }, [isAcceptNode]);
 
     return (
