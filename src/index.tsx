@@ -70,7 +70,7 @@ function App() {
     }, [selectedObjects]);
 
     useEffect(() => {
-        StateManager.startNode = startNode;
+        StateManager.setNodeIsStart(startNode);
     }, [startNode]);
 
     const emptyStringToken = StateManager.alphabet.some(token => token.symbol.trim() === '');

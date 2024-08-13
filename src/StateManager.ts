@@ -331,6 +331,26 @@ export default class StateManager {
         UndoRedoManager.pushAction(setNodeIsAcceptAction);
     }
 
+    public static setNodeIsStart(nodeWrapper: NodeWrapper) {
+        let oldStart = StateManager._startNode;
+
+        let setNodeIsStartForward = (data: SetNodeIsStartActionData) => {
+            StateManager.startNode = data.newStart;
+        };
+
+        let setNodeIsStartBackward = (data: SetNodeIsStartActionData) => {
+            StateManager.startNode = data.oldStart;
+        };
+
+        let setNodeIsStartAction = new Action(
+            "setNodeIsStart",
+            setNodeIsStartForward,
+            setNodeIsStartBackward,
+            {'oldStart': oldStart, 'newStart': nodeWrapper}
+        );
+        UndoRedoManager.pushAction(setNodeIsStartAction);
+    }
+
 
 
     public static addTransition(transition: TransitionWrapper) {
@@ -904,4 +924,9 @@ class SetNodeIsAcceptActionData extends ActionData {
     public oldValue: boolean;
     public newValue: boolean;
     public nodeWrapper: NodeWrapper;
+}
+
+class SetNodeIsStartActionData extends ActionData {
+    public oldStart: NodeWrapper;
+    public newStart: NodeWrapper;
 }
