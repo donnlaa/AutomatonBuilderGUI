@@ -262,7 +262,8 @@ export default class StateManager {
             y = Math.round(y / gridSpacing) * gridSpacing;
         }
 
-        const newStateWrapper = new NodeWrapper(`q${StateManager._nextStateId++}`);
+        const newStateWrapperName = `q${StateManager._nextStateId++}`;
+        const newStateWrapper = new NodeWrapper(newStateWrapperName);
         let createStateForward = (data: CreateNodeActionData) => {
             newStateWrapper.createKonvaObjects(data.x, data.y);
             StateManager._nodeWrappers.push(newStateWrapper);
@@ -284,6 +285,7 @@ export default class StateManager {
 
         let createStateAction = new Action(
             "createState",
+            `Create "${newStateWrapperName}"`,
             createStateForward,
             createStateBackward,
             {'x': x, 'y': y, "nodeWrapper": null}
@@ -304,6 +306,7 @@ export default class StateManager {
 
         let setNodeNameAction = new Action(
             "setNodeName",
+            `Rename "${oldName}" To "${newName}"`,
             setNodeNameForward,
             setNodeNameBackward,
             {'oldName': oldName, 'newName': newName, 'nodeWrapper': nodeWrapper}
@@ -324,6 +327,7 @@ export default class StateManager {
 
         let setNodeIsAcceptAction = new Action(
             "setNodeIsAccept",
+            `Mark "${nodeWrapper.labelText}" as ${isAccept ? 'Accepting' : 'Rejecting'}`,
             setNodeIsAcceptForward,
             setNodeIsAcceptBackward,
             {'oldValue': oldValue, 'newValue': isAccept, 'nodeWrapper': nodeWrapper}
@@ -344,6 +348,7 @@ export default class StateManager {
 
         let setNodeIsStartAction = new Action(
             "setNodeIsStart",
+            `Set "${nodeWrapper?.labelText ?? 'none'}" As Initial Node`,
             setNodeIsStartForward,
             setNodeIsStartBackward,
             {'oldStart': oldStart, 'newStart': nodeWrapper}
@@ -863,8 +868,18 @@ export default class StateManager {
             });
         };
 
+        let moveStatesString = "Move ";
+        if (this.selectedObjects.length > 1) {
+            moveStatesString += `${this.selectedObjects.length} Nodes`;
+        }
+        else if (this.selectedObjects.length == 1) {
+            let singleState = this.selectedObjects[0] as NodeWrapper;
+            moveStatesString += `"${singleState.labelText}"`;
+        }
+
         let moveNodesAction = new Action(
             "moveStates",
+            moveStatesString,
             moveStatesForward,
             moveStatesBackward,
             {delta: delta, states: [...this.selectedObjects]}

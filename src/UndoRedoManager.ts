@@ -54,12 +54,14 @@ export default class UndoRedoManager {
 
 export class Action {
     public name: string;
+    public displayString: string;
     private _forward: (data: ActionData) => void;
     private _backward: (data: ActionData) => void;
     private _data: ActionData;
 
-    constructor(name: string, forward: (data: ActionData) => void, backward: (data: ActionData) => void, data: ActionData) {
+    constructor(name: string, displayString: string, forward: (data: ActionData) => void, backward: (data: ActionData) => void, data: ActionData) {
         this.name = name;
+        this.displayString = displayString;
         this._forward = forward;
         this._backward = backward;
         this._data = data;
@@ -67,12 +69,12 @@ export class Action {
 
     public forward() {
         this._forward(this._data);
-        console.log(`Action "${this.name}" performed forward!`);
+        console.log(`FORWARD: ${this.displayString}`);
     }
 
     public backward() {
         this._backward(this._data);
-        console.log(`Action "${this.name}" performed backward!`);
+        console.log(`BACKWARD: ${this.displayString}`);
     }
 }
 
