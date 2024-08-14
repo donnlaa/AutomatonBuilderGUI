@@ -356,13 +356,6 @@ export default class StateManager {
         UndoRedoManager.pushAction(setNodeIsStartAction);
     }
 
-
-
-    public static addTransition(transition: TransitionWrapper) {
-        console.log('Adding transition to the array');
-        StateManager._transitionWrappers.push(transition);
-    }
-
     public static set startNode(node: NodeWrapper | null) {
         if (StateManager._startNode) {
             StateManager._startNode.nodeGroup.off('move.startstate');
@@ -461,10 +454,7 @@ export default class StateManager {
                 StateManager.selectObject(existingTransition);
             }
             else {
-                const newTransitionWrapper = new TransitionWrapper(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
-                StateManager._transitionWrappers.push(newTransitionWrapper);
-                StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
-                StateManager._transitionLayer.draw();
+                StateManager.addTransition(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
             }
         }
 
@@ -474,6 +464,31 @@ export default class StateManager {
         StateManager._tentativeTransitionSource = null;
         StateManager._tentativeTransitionTarget = null;
         StateManager._tentConnectionLine.visible(false);
+    }
+
+    public static addTransition(source: NodeWrapper, dest: NodeWrapper) {
+        const newTransitionWrapper = new TransitionWrapper(source, dest);
+
+        let addTransitionForward = (data: AddTransitionActionData) => {
+            StateManager._transitionWrappers.push(data.transition);
+            StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
+            StateManager._transitionLayer.draw();
+        };
+
+        let addTransitionBackward = (data: AddTransitionActionData) => {
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(i => i !== data.transition);
+            newTransitionWrapper.konvaGroup.remove();
+            StateManager._transitionLayer.draw();
+        };
+
+        let addTransitionAction = new Action(
+            "addTransition",
+            `Add Transition from "${source.labelText}" to "${dest.labelText}"`,
+            addTransitionForward,
+            addTransitionBackward,
+            { 'transition': newTransitionWrapper }
+        );
+        UndoRedoManager.pushAction(addTransitionAction);
     }
 
 
@@ -944,4 +959,8 @@ class SetNodeIsAcceptActionData extends ActionData {
 class SetNodeIsStartActionData extends ActionData {
     public oldStart: NodeWrapper;
     public newStart: NodeWrapper;
+}
+
+class AddTransitionActionData extends ActionData {
+    public transition: TransitionWrapper;
 }
