@@ -491,6 +491,55 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTransitionAction);
     }
 
+    public static setTransitionAcceptsToken(transition: TransitionWrapper, token: TokenWrapper) {
+        let hadTokenBefore = transition.hasToken(token);
+        let setTransitionAcceptsTokenForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.addToken(data.token);
+        };
+
+        let setTransitionAcceptsTokenBackward = (data: SetTransitionAcceptsTokenData) => {
+            if (hadTokenBefore) {
+                data.transition.addToken(data.token);
+            }
+            else {
+                data.transition.removeToken(data.token);
+            }
+        };
+
+        let setTransitionAcceptsTokenAction = new Action(
+            "setTransitionAcceptsToken",
+            `Use Token "${token.symbol}" For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionAcceptsTokenForward,
+            setTransitionAcceptsTokenBackward,
+            { 'transition': transition, 'token': token }
+        );
+        UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
+    }
+
+    public static setTransitionDoesntAcceptToken(transition: TransitionWrapper, token: TokenWrapper) {
+        let hadTokenBefore = transition.hasToken(token);
+        let setTransitionDoesntAcceptTokenForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.removeToken(data.token);
+        };
+
+        let setTransitionDoesntAcceptTokenBackward = (data: SetTransitionAcceptsTokenData) => {
+            if (hadTokenBefore) {
+                data.transition.addToken(data.token);
+            }
+            else {
+                data.transition.removeToken(data.token);
+            }
+        };
+
+        let setTransitionDoesntAcceptTokenAction = new Action(
+            "setTransitionDoesntAcceptToken",
+            `Don't Use Token "${token.symbol}" For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionDoesntAcceptTokenForward,
+            setTransitionDoesntAcceptTokenBackward,
+            { 'transition': transition, 'token': token }
+        );
+        UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
+    }
 
     public static get tentativeTransitionInProgress() {
         return StateManager._tentativeTransitionSource !== null;
@@ -963,4 +1012,9 @@ class SetNodeIsStartActionData extends ActionData {
 
 class AddTransitionActionData extends ActionData {
     public transition: TransitionWrapper;
+}
+
+class SetTransitionAcceptsTokenData extends ActionData {
+    public transition: TransitionWrapper;
+    public token: TokenWrapper;
 }

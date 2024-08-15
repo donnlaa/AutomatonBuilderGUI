@@ -23,10 +23,12 @@ function DetailsBox_TransitionTokenCheckBox(props: DetailsBox_TransitionTokenChe
     const [tokenIsIncluded, setTokenIsIncluded] = useState(transition.hasToken(token));
     useEffect(() => {
         if (tokenIsIncluded) {
-            transition.addToken(token);
+            // transition.addToken(token);
+            StateManager.setTransitionAcceptsToken(transition, token);
         }
         else {
-            transition.removeToken(token);
+            // transition.removeToken(token);
+            StateManager.setTransitionDoesntAcceptToken(transition, token);
         }
         props.setLastUpdated(new Date().getTime());
     }, [tokenIsIncluded]);
