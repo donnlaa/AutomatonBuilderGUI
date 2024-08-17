@@ -541,6 +541,46 @@ export default class StateManager {
         UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
     }
 
+    public static setTransitionAcceptsEpsilon(transition: TransitionWrapper) {
+        let hadEpsilonBefore = transition.isEpsilonTransition;
+
+        let setTransitionAcceptsEpsilonForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = true;
+        };
+
+        let setTransitionAcceptsEpsilonBackward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = hadEpsilonBefore;
+        }
+        let setTransitionAcceptsTokenAction = new Action(
+            "setTransitionAcceptsEpsilon",
+            `Use ε For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionAcceptsEpsilonForward,
+            setTransitionAcceptsEpsilonBackward,
+            { 'transition': transition, 'token': null }
+        );
+        UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
+    }
+
+    public static setTransitionDoesntAcceptEpsilon(transition: TransitionWrapper) {
+        let hadEpsilonBefore = transition.isEpsilonTransition;
+
+        let setTransitionDoesntAcceptEpsilonForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = false;
+        };
+
+        let setTransitionDoesntAcceptEpsilonBackward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = hadEpsilonBefore;
+        }
+        let setTransitionDoesntAcceptTokenAction = new Action(
+            "setTransitionDoesntAcceptEpsilon",
+            `Don't Use ε For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionDoesntAcceptEpsilonForward,
+            setTransitionDoesntAcceptEpsilonBackward,
+            { 'transition': transition, 'token': null }
+        );
+        UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
+    }
+
     public static get tentativeTransitionInProgress() {
         return StateManager._tentativeTransitionSource !== null;
     }

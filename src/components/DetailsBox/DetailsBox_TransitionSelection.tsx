@@ -50,7 +50,11 @@ export default function DetailsBox_TransitionSelection(props: DetailsBox_Transit
     const [isEpsilonTransition, setEpsilonTransition] = useState(tw.isEpsilonTransition);
 
     useEffect(() => {
-        tw.isEpsilonTransition = isEpsilonTransition;
+        if (isEpsilonTransition) {
+            StateManager.setTransitionAcceptsEpsilon(tw);
+        } else {
+            StateManager.setTransitionDoesntAcceptEpsilon(tw);
+        }
         props.setLastUpdated(new Date().getTime());
     }, [isEpsilonTransition]);
 
