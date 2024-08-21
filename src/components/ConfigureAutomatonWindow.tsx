@@ -14,7 +14,8 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
     const [tokenSymbol, setTokenSymbol] = useState(tw.symbol);
 
     useEffect(() => {
-        tw.symbol = tokenSymbol;
+        // tw.symbol = tokenSymbol;
+        StateManager.setTokenSymbol(tw, tokenSymbol);
     }, [tokenSymbol]);
 
     return (
@@ -39,9 +40,11 @@ function AlphabetList() {
     const [alphabet, setAlphabet] = useState(StateManager.alphabet);
 
     function addTokenToAlphabet() {
-        const newAlphabet = [...alphabet];
-        newAlphabet.push(new TokenWrapper());
-        setAlphabet(newAlphabet);
+        StateManager.addToken();
+        setAlphabet(StateManager.alphabet);
+        // const newAlphabet = [...alphabet];
+        // newAlphabet.push(new TokenWrapper());
+        // setAlphabet(newAlphabet);
     }
 
     function removeTokenFromAlphabet(tk: TokenWrapper) {
@@ -49,9 +52,9 @@ function AlphabetList() {
         setAlphabet(newAlphabet);
     }
 
-    useEffect(() => {
-        StateManager.alphabet = alphabet;
-    }, [alphabet]);
+    // useEffect(() => {
+    //     StateManager.alphabet = alphabet;
+    // }, [alphabet]);
 
     const tokenWrapperElements = alphabet.map(tw => <ListItem_TokenEditor tokenWrapper={tw} removeFunc={removeTokenFromAlphabet} key={tw.id} />);
 

@@ -491,6 +491,49 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTransitionAction);
     }
 
+    public static addToken() {
+        // TODO: logic for removing tokens needs to be modified - right now
+        // it looks like it does some checks that we may no longer want, now
+        // that we have undo/redo!
+        const newToken = new TokenWrapper();
+        let addTokenForward = (data: AddTokenActionData) => {
+            StateManager._alphabet.push(data.token);
+        };
+        let addTokenBackward = (data: AddTokenActionData) => {
+            StateManager._alphabet = StateManager._alphabet.filter(i => i !== data.token);
+        };
+
+        let addTokenAction = new Action(
+            "addToken",
+            "Add Token",
+            addTokenForward,
+            addTokenBackward,
+            { 'token': newToken }
+        );
+        UndoRedoManager.pushAction(addTokenAction);
+    }
+
+    public static setTokenSymbol(token: TokenWrapper, newSymbol: string) {
+        let oldSymbol = token.symbol;
+
+        let setTokenSymbolForward = (data: SetTokenSymbolActionData) => {
+            data.token.symbol = data.newSymbol;
+        };
+
+        let setTokenSymbolBackward = (data: SetTokenSymbolActionData) => {
+            data.token.symbol = data.oldSymbol;
+        };
+
+        let setTokenSymbolAction = new Action(
+            "setTokenSymbol",
+            `Rename Token "${oldSymbol}" To "${newSymbol}"`,
+            setTokenSymbolForward,
+            setTokenSymbolBackward,
+            {'oldSymbol': oldSymbol, 'newSymbol': newSymbol, 'token': token}
+        );
+        UndoRedoManager.pushAction(setTokenSymbolAction);
+    }
+
     public static setTransitionAcceptsToken(transition: TransitionWrapper, token: TokenWrapper) {
         let hadTokenBefore = transition.hasToken(token);
         let setTransitionAcceptsTokenForward = (data: SetTransitionAcceptsTokenData) => {
@@ -550,7 +593,7 @@ export default class StateManager {
 
         let setTransitionAcceptsEpsilonBackward = (data: SetTransitionAcceptsTokenData) => {
             data.transition.isEpsilonTransition = hadEpsilonBefore;
-        }
+        };
         let setTransitionAcceptsTokenAction = new Action(
             "setTransitionAcceptsEpsilon",
             `Use ε For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
@@ -1056,5 +1099,15 @@ class AddTransitionActionData extends ActionData {
 
 class SetTransitionAcceptsTokenData extends ActionData {
     public transition: TransitionWrapper;
+    public token: TokenWrapper;
+}
+
+class AddTokenActionData extends ActionData {
+    public token: TokenWrapper;
+}
+
+class SetTokenSymbolActionData extends ActionData {
+    public oldSymbol: string;
+    public newSymbol: string;
     public token: TokenWrapper;
 }
