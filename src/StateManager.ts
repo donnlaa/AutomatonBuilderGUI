@@ -293,6 +293,68 @@ export default class StateManager {
         UndoRedoManager.pushAction(createStateAction);
     }
 
+    public static removeState(nodeWrapper: NodeWrapper) {
+        // Find all transitions involving this node, save those
+        let transitionsInvolvingThisNode = new Set(this._transitionWrappers.filter(i => i.involvesNode(nodeWrapper)));
+
+        // Save this node's start state status
+        let isStart = StateManager.startNode === nodeWrapper;
+
+        let deleteStateForward = (data: RemoveStateActionData) => {
+            // Remove all transitions involving this node from the current state machine
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(transition => {
+                return !transitionsInvolvingThisNode.has(transition);
+            });
+
+            data.transitions.forEach(transition => {
+                transition.konvaGroup.remove();
+            });
+
+            StateManager._transitionLayer.draw();
+
+            // Remove the state itself
+            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
+                return node !== nodeWrapper;
+            });
+            data.nodeWrapper.nodeGroup.remove();
+
+            // Clear start state, if this node was the start state
+            if (data.isStart) {
+                StateManager.startNode = null;
+            }
+        };
+
+        let deleteStateBackward = (data: RemoveStateActionData) => {
+            // Add the state itself
+            StateManager._nodeWrappers.push(data.nodeWrapper);
+
+            // Create Konva objects
+            StateManager._nodeLayer.add(data.nodeWrapper.nodeGroup);
+
+            // Set state start
+            if (data.isStart) {
+                StateManager.startNode = data.nodeWrapper;
+            }
+
+            // Add all transitions involving this node to the current state machine
+            data.transitions.forEach(transition => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+            StateManager._transitionLayer.draw();
+        };
+
+        let deleteNodeAction = new Action(
+            "deleteNode",
+            `Delete State "${nodeWrapper.labelText}"`,
+            deleteStateForward,
+            deleteStateBackward,
+            { 'nodeWrapper': nodeWrapper, 'transitions': transitionsInvolvingThisNode, 'isStart': isStart }
+        );
+        UndoRedoManager.pushAction(deleteNodeAction);
+
+    }
+
     public static setNodeName(nodeWrapper: NodeWrapper, newName: string) {
         let oldName = nodeWrapper.labelText;
 
@@ -661,32 +723,43 @@ export default class StateManager {
     }
 
     public static deleteAllSelectedObjects() {
-        // Find all transitions dependent on selected nodes
-        // StateManager._selectedObjects.forEach((obj) => this.deleteNode(obj));
-        const nodesToRemove = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
-        const transitionsDependentOnDeletedNodes: Array<TransitionWrapper> = [];
-        nodesToRemove.forEach((node) => {
-            StateManager._transitionWrappers.forEach((trans) => {
-                if (trans.involvesNode(node) && !transitionsDependentOnDeletedNodes.includes(trans)) {
-                    transitionsDependentOnDeletedNodes.push(trans);
-                }
-            });
-        });
-        // Keep transitions that aren't in the selected objects, AND aren't dependent on selected objects
-        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => !StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
+        // Remove all states
+        StateManager._selectedObjects
+            .filter(i => i instanceof NodeWrapper)
+            .forEach(state => StateManager.removeState(state as NodeWrapper));
 
-        // Next, delete all selected nodes
-        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => !StateManager._selectedObjects.includes(i));
-
-        StateManager._selectedObjects.forEach((obj) => obj.deleteKonvaObjects());
-        transitionsDependentOnDeletedNodes.forEach((obj) => obj.deleteKonvaObjects());
-
-        if (nodesToRemove.includes(StateManager._startNode)) {
-            StateManager.startNode = null;
-        }
-
+        // Empty selection
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
+
+        // OLD IMPLEMENTATION BELOW - WILL PROBABLY DELETE ONCE THE
+        // NEW UNDO/REDO SYSTEM IS WORKING
+        // Find all transitions dependent on selected nodes
+        // StateManager._selectedObjects.forEach((obj) => this.deleteNode(obj));
+        // const nodesToRemove = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
+        // const transitionsDependentOnDeletedNodes: Array<TransitionWrapper> = [];
+        // nodesToRemove.forEach((node) => {
+        //     StateManager._transitionWrappers.forEach((trans) => {
+        //         if (trans.involvesNode(node) && !transitionsDependentOnDeletedNodes.includes(trans)) {
+        //             transitionsDependentOnDeletedNodes.push(trans);
+        //         }
+        //     });
+        // });
+        // // Keep transitions that aren't in the selected objects, AND aren't dependent on selected objects
+        // StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => !StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
+
+        // // Next, delete all selected nodes
+        // StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => !StateManager._selectedObjects.includes(i));
+
+        // StateManager._selectedObjects.forEach((obj) => obj.deleteKonvaObjects());
+        // transitionsDependentOnDeletedNodes.forEach((obj) => obj.deleteKonvaObjects());
+
+        // if (nodesToRemove.includes(StateManager._startNode)) {
+        //     StateManager.startNode = null;
+        // }
+
+        // StateManager.setSelectedObjects([]);
+        // StateManager._selectedObjects = [];
     }
 
     public static deleteNode(node: NodeWrapper) {
@@ -702,8 +775,9 @@ export default class StateManager {
         });
 
         StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => node != i);
-        node.deleteKonvaObjects();
-        transitionsDependentOnDeletedNode.forEach((obj) => obj.deleteKonvaObjects());
+        // node.deleteKonvaObjects();
+        node.nodeGroup.remove();
+        transitionsDependentOnDeletedNode.forEach((obj) => obj.konvaGroup.remove());
 
         if (node == StateManager._startNode) {
             StateManager.startNode = null;
@@ -1069,6 +1143,12 @@ class CreateNodeActionData extends ActionData {
     public y: number;
     public nodeWrapper: NodeWrapper;
     public labelText: string;
+}
+
+class RemoveStateActionData extends ActionData {
+    public nodeWrapper: NodeWrapper;
+    public transitions: Set<TransitionWrapper>;
+    public isStart: boolean;
 }
 
 class MoveStatesActionData extends ActionData {
