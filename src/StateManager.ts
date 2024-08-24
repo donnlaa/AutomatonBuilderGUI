@@ -553,6 +553,31 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTransitionAction);
     }
 
+    public static deleteTransition(transitionWrapper: TransitionWrapper) {
+        let deleteTransitionForward = (data: DeleteTransitionActionData) => {
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transitionWrapper);
+
+            data.transitionWrapper.konvaGroup.remove();
+            StateManager._transitionLayer.draw();
+        };
+
+        let deleteTransitionBackward = (data: DeleteTransitionActionData) => {
+            StateManager._transitionWrappers.push(data.transitionWrapper);
+
+            StateManager._transitionLayer.add(data.transitionWrapper.konvaGroup);
+            StateManager._transitionLayer.draw();
+        };
+
+        let deleteTransitionAction = new Action(
+            "deleteTransition",
+            `Delete Transition "${transitionWrapper.sourceNode.labelText}" to "${transitionWrapper.destNode.labelText}"`,
+                deleteTransitionForward,
+                deleteTransitionBackward,
+                { 'transitionWrapper': transitionWrapper }
+        );
+        UndoRedoManager.pushAction(deleteTransitionAction);
+    }
+
     public static addToken() {
         // TODO: logic for removing tokens needs to be modified - right now
         // it looks like it does some checks that we may no longer want, now
@@ -724,42 +749,18 @@ export default class StateManager {
 
     public static deleteAllSelectedObjects() {
         // Remove all states
-        StateManager._selectedObjects
-            .filter(i => i instanceof NodeWrapper)
-            .forEach(state => StateManager.removeState(state as NodeWrapper));
+        let selectedNodes = StateManager._selectedObjects.filter(i => i instanceof NodeWrapper);
+        selectedNodes.forEach(state => StateManager.removeState(state as NodeWrapper));
+
+        // NOTE: This may well break when a state and a transition connected
+        // to it are both deleted at the same time! We'll have to figure out
+        // how to handle that case.
+        let selectedTransitions = StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper);
+        selectedTransitions.forEach(trans => StateManager.deleteTransition(trans as TransitionWrapper));
 
         // Empty selection
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
-
-        // OLD IMPLEMENTATION BELOW - WILL PROBABLY DELETE ONCE THE
-        // NEW UNDO/REDO SYSTEM IS WORKING
-        // Find all transitions dependent on selected nodes
-        // StateManager._selectedObjects.forEach((obj) => this.deleteNode(obj));
-        // const nodesToRemove = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
-        // const transitionsDependentOnDeletedNodes: Array<TransitionWrapper> = [];
-        // nodesToRemove.forEach((node) => {
-        //     StateManager._transitionWrappers.forEach((trans) => {
-        //         if (trans.involvesNode(node) && !transitionsDependentOnDeletedNodes.includes(trans)) {
-        //             transitionsDependentOnDeletedNodes.push(trans);
-        //         }
-        //     });
-        // });
-        // // Keep transitions that aren't in the selected objects, AND aren't dependent on selected objects
-        // StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => !StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
-
-        // // Next, delete all selected nodes
-        // StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => !StateManager._selectedObjects.includes(i));
-
-        // StateManager._selectedObjects.forEach((obj) => obj.deleteKonvaObjects());
-        // transitionsDependentOnDeletedNodes.forEach((obj) => obj.deleteKonvaObjects());
-
-        // if (nodesToRemove.includes(StateManager._startNode)) {
-        //     StateManager.startNode = null;
-        // }
-
-        // StateManager.setSelectedObjects([]);
-        // StateManager._selectedObjects = [];
     }
 
     public static deleteNode(node: NodeWrapper) {
@@ -1175,6 +1176,10 @@ class SetNodeIsStartActionData extends ActionData {
 
 class AddTransitionActionData extends ActionData {
     public transition: TransitionWrapper;
+}
+
+class DeleteTransitionActionData extends ActionData {
+    public transitionWrapper: TransitionWrapper;
 }
 
 class SetTransitionAcceptsTokenData extends ActionData {
