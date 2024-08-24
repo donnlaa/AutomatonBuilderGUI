@@ -310,7 +310,7 @@ export default class StateManager {
                 transition.konvaGroup.remove();
             });
 
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
 
             // Remove the state itself
             StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
@@ -341,7 +341,7 @@ export default class StateManager {
                 StateManager._transitionWrappers.push(transition);
                 StateManager._transitionLayer.add(transition.konvaGroup);
             });
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
         };
 
         let deleteNodeAction = new Action(
@@ -534,13 +534,13 @@ export default class StateManager {
         let addTransitionForward = (data: AddTransitionActionData) => {
             StateManager._transitionWrappers.push(data.transition);
             StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
         };
 
         let addTransitionBackward = (data: AddTransitionActionData) => {
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(i => i !== data.transition);
             newTransitionWrapper.konvaGroup.remove();
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
         };
 
         let addTransitionAction = new Action(
@@ -558,14 +558,14 @@ export default class StateManager {
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transitionWrapper);
 
             data.transitionWrapper.konvaGroup.remove();
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
         };
 
         let deleteTransitionBackward = (data: DeleteTransitionActionData) => {
             StateManager._transitionWrappers.push(data.transitionWrapper);
 
             StateManager._transitionLayer.add(data.transitionWrapper.konvaGroup);
-            StateManager._transitionLayer.draw();
+            StateManager.updateTransitions();
         };
 
         let deleteTransitionAction = new Action(
@@ -1075,6 +1075,7 @@ export default class StateManager {
                     this.updateStartNodePosition();
                 }
             });
+            StateManager.updateTransitions();
         };
 
         let moveStatesBackward = (data: MoveStatesActionData) => {
@@ -1088,6 +1089,7 @@ export default class StateManager {
                     this.updateStartNodePosition();
                 }
             });
+            StateManager.updateTransitions();
         };
 
         let moveStatesString = "Move ";
@@ -1108,6 +1110,13 @@ export default class StateManager {
         );
 
         UndoRedoManager.pushAction(moveNodesAction, false);
+    }
+
+    public static updateTransitions() {
+        StateManager._transitionWrappers.forEach(trans => {
+            trans.updatePoints();
+        });
+        StateManager._transitionLayer.draw();
     }
 }
 
