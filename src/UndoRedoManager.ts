@@ -11,6 +11,9 @@ export default class UndoRedoManager {
     // down the stack. 
     private static _stackLocation: number = -1;
 
+    // A set of functions to call when the stack changes.
+    private static _listeners: Set<() => void> = new Set<() => void>();
+
     public static pushAction(action: Action, performForward: boolean = true) {
         if (this._stackLocation == this._stack.length - 1) {
             // We are at the top of the stack, so we can
@@ -31,6 +34,8 @@ export default class UndoRedoManager {
         if (performForward) {
             action.forward();
         }
+
+        this.callListeners();
     }
 
     public static redo() {
@@ -40,6 +45,7 @@ export default class UndoRedoManager {
         }
         this._stackLocation += 1;
         this._stack[this._stackLocation].forward();
+        this.callListeners();
     }
 
     public static undo() {
@@ -49,6 +55,29 @@ export default class UndoRedoManager {
         }
         this._stack[this._stackLocation].backward();
         this._stackLocation -= 1;
+        this.callListeners();
+    }
+
+    // TODO: Pass a copy of the stack rather than the stack itself,
+    // to prevent modifications
+    public static getStack() {
+        return this._stack;
+    }
+
+    public static getStackLocation() {
+        return this._stackLocation;
+    }
+
+    public static startListeningOnStackChanged(listener: () => void) {
+        this._listeners.add(listener);
+    }
+
+    public static stopListeningOnStackChanged(listener: () => void) {
+        this._listeners.delete(listener);
+    }
+
+    private static callListeners() {
+        this._listeners.forEach(listener => listener());
     }
 }
 

@@ -14,6 +14,7 @@ import TestStringWindow from './components/TestStringWindow';
 import InformationBox, { InformationBoxType } from './components/InformationBox';
 import { testStringOnAutomata } from './components/TestStringOnAutomata';
 import {  } from './components/TestStringWindow';
+import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
 
 function App() {
     const [currentTool, setCurrentTool] = useState(Tool.States);
@@ -178,6 +179,11 @@ function App() {
                                 </div>
                             </button>
                         </div>
+                    </FloatingPanel>
+                </div>
+                <div>
+                    <FloatingPanel heightPolicy='min' style={{ width: '250px' }}>
+                        <DetailsBox_ActionStackViewer />
                     </FloatingPanel>
                 </div>
 
