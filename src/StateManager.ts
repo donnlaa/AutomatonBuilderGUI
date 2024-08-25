@@ -600,6 +600,29 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTokenAction);
     }
 
+    public static removeToken(token: TokenWrapper) {
+        let transitionsUsingToken = StateManager._transitionWrappers.filter(trans => trans.hasToken(token));
+
+        let removeTokenForward = (data: RemoveTokenActionData) => {
+            StateManager._alphabet = StateManager._alphabet.filter(i => i !== data.token);
+            transitionsUsingToken.forEach(trans => trans.removeToken(token));
+        };
+
+        let removeTokenBackward = (data: RemoveTokenActionData) => {
+            StateManager._alphabet.push(data.token);
+            transitionsUsingToken.forEach(trans => trans.addToken(token));
+        };
+
+        let removeTokenAction = new Action(
+            "removeToken",
+            `Remove Token "${token.symbol}"`,
+            removeTokenForward,
+            removeTokenBackward,
+            { 'token': token, 'transitionsUsingToken': transitionsUsingToken }
+        );
+        UndoRedoManager.pushAction(removeTokenAction);
+    }
+
     public static setTokenSymbol(token: TokenWrapper, newSymbol: string) {
         let oldSymbol = token.symbol;
 
@@ -880,18 +903,18 @@ export default class StateManager {
 
 
     public static set alphabet(newAlphabet: Array<TokenWrapper>) {
-        const oldAlphabet = StateManager._alphabet;
+        // const oldAlphabet = StateManager._alphabet;
         StateManager._alphabet = newAlphabet;
 
-        oldAlphabet.forEach(tok => {
-            if (!newAlphabet.includes(tok)) {
-                // The token tok was removed from the alphabet, so we need
-                // to remove it from any transitions!
-                StateManager._transitionWrappers.forEach(transition => {
-                    transition.removeToken(tok);
-                });
-            }
-        });
+        // oldAlphabet.forEach(tok => {
+        //     if (!newAlphabet.includes(tok)) {
+        //         // The token tok was removed from the alphabet, so we need
+        //         // to remove it from any transitions!
+        //         StateManager._transitionWrappers.forEach(transition => {
+        //             transition.removeToken(tok);
+        //         });
+        //     }
+        // });
     }
 
     public static get alphabet() {
@@ -1198,6 +1221,11 @@ class SetTransitionAcceptsTokenData extends ActionData {
 
 class AddTokenActionData extends ActionData {
     public token: TokenWrapper;
+}
+
+class RemoveTokenActionData extends ActionData {
+    public token: TokenWrapper;
+    public transitionsUsingToken: TransitionWrapper[];
 }
 
 class SetTokenSymbolActionData extends ActionData {
