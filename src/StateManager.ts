@@ -264,7 +264,7 @@ export default class StateManager {
 
         const newStateWrapperName = `q${StateManager._nextStateId++}`;
         const newStateWrapper = new NodeWrapper(newStateWrapperName);
-        let createStateForward = (data: CreateNodeActionData) => {
+        let addNodeForward = (data: CreateNodeActionData) => {
             newStateWrapper.createKonvaObjects(data.x, data.y);
             StateManager._nodeWrappers.push(newStateWrapper);
             StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
@@ -275,32 +275,31 @@ export default class StateManager {
 
             StateManager._nodeLayer?.draw();
 
-            data.labelText = newStateWrapper.labelText;
-            data.nodeWrapper = newStateWrapper;
+            data.node = newStateWrapper;
         };
 
-        let createStateBackward = (data: CreateNodeActionData) => {
-            this.deleteNode(data.nodeWrapper);
+        let addNodeBackward = (data: CreateNodeActionData) => {
+            this.deleteNode(data.node);
         };
 
-        let createStateAction = new Action(
-            "createState",
-            `Create "${newStateWrapperName}"`,
-            createStateForward,
-            createStateBackward,
-            {'x': x, 'y': y, "nodeWrapper": null}
+        let addNodeAction = new Action(
+            "addNode",
+            `Add "${newStateWrapperName}"`,
+            addNodeForward,
+            addNodeBackward,
+            {'x': x, 'y': y, "node": null}
         );
-        UndoRedoManager.pushAction(createStateAction);
+        UndoRedoManager.pushAction(addNodeAction);
     }
 
-    public static removeState(nodeWrapper: NodeWrapper) {
+    public static removeNode(node: NodeWrapper) {
         // Find all transitions involving this node, save those
-        let transitionsInvolvingThisNode = new Set(this._transitionWrappers.filter(i => i.involvesNode(nodeWrapper)));
+        let transitionsInvolvingThisNode = new Set(this._transitionWrappers.filter(i => i.involvesNode(node)));
 
         // Save this node's start state status
-        let isStart = StateManager.startNode === nodeWrapper;
+        let isStart = StateManager.startNode === node;
 
-        let deleteStateForward = (data: RemoveStateActionData) => {
+        let removeNodeForward = (data: RemoveNodeActionData) => {
             // Remove all transitions involving this node from the current state machine
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(transition => {
                 return !transitionsInvolvingThisNode.has(transition);
@@ -312,11 +311,11 @@ export default class StateManager {
 
             StateManager.updateTransitions();
 
-            // Remove the state itself
+            // Remove the node itself
             StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
-                return node !== nodeWrapper;
+                return node !== node;
             });
-            data.nodeWrapper.nodeGroup.remove();
+            data.node.nodeGroup.remove();
 
             // Clear start state, if this node was the start state
             if (data.isStart) {
@@ -324,16 +323,16 @@ export default class StateManager {
             }
         };
 
-        let deleteStateBackward = (data: RemoveStateActionData) => {
-            // Add the state itself
-            StateManager._nodeWrappers.push(data.nodeWrapper);
+        let removeNodeBackward = (data: RemoveNodeActionData) => {
+            // Add the node itself
+            StateManager._nodeWrappers.push(data.node);
 
             // Create Konva objects
-            StateManager._nodeLayer.add(data.nodeWrapper.nodeGroup);
+            StateManager._nodeLayer.add(data.node.nodeGroup);
 
             // Set state start
             if (data.isStart) {
-                StateManager.startNode = data.nodeWrapper;
+                StateManager.startNode = data.node;
             }
 
             // Add all transitions involving this node to the current state machine
@@ -344,26 +343,26 @@ export default class StateManager {
             StateManager.updateTransitions();
         };
 
-        let deleteNodeAction = new Action(
-            "deleteNode",
-            `Delete State "${nodeWrapper.labelText}"`,
-            deleteStateForward,
-            deleteStateBackward,
-            { 'nodeWrapper': nodeWrapper, 'transitions': transitionsInvolvingThisNode, 'isStart': isStart }
+        let removeNodeAction = new Action(
+            "removeNode",
+            `Delete Node "${node.labelText}"`,
+            removeNodeForward,
+            removeNodeBackward,
+            { 'node': node, 'transitions': transitionsInvolvingThisNode, 'isStart': isStart }
         );
-        UndoRedoManager.pushAction(deleteNodeAction);
+        UndoRedoManager.pushAction(removeNodeAction);
 
     }
 
-    public static setNodeName(nodeWrapper: NodeWrapper, newName: string) {
-        let oldName = nodeWrapper.labelText;
+    public static setNodeName(node: NodeWrapper, newName: string) {
+        let oldName = node.labelText;
 
         let setNodeNameForward = (data: SetNodeNameActionData) => {
-            data.nodeWrapper.labelText = data.newName;
+            data.node.labelText = data.newName;
         };
 
         let setNodeNameBackward = (data: SetNodeNameActionData) => {
-            data.nodeWrapper.labelText = data.oldName;
+            data.node.labelText = data.oldName;
         };
 
         let setNodeNameAction = new Action(
@@ -371,33 +370,33 @@ export default class StateManager {
             `Rename "${oldName}" To "${newName}"`,
             setNodeNameForward,
             setNodeNameBackward,
-            {'oldName': oldName, 'newName': newName, 'nodeWrapper': nodeWrapper}
+            {'oldName': oldName, 'newName': newName, 'node': node}
         );
         UndoRedoManager.pushAction(setNodeNameAction);
     }
 
-    public static setNodeIsAccept(nodeWrapper: NodeWrapper, isAccept: boolean) {
-        let oldValue = nodeWrapper.isAcceptNode
+    public static setNodeIsAccept(node: NodeWrapper, isAccept: boolean) {
+        let oldValue = node.isAcceptNode
 
         let setNodeIsAcceptForward = (data: SetNodeIsAcceptActionData) => {
-            data.nodeWrapper.isAcceptNode = data.newValue;
+            data.node.isAcceptNode = data.newValue;
         };
 
         let setNodeIsAcceptBackward = (data: SetNodeIsAcceptActionData) => {
-            data.nodeWrapper.isAcceptNode = data.oldValue;
+            data.node.isAcceptNode = data.oldValue;
         };
 
         let setNodeIsAcceptAction = new Action(
             "setNodeIsAccept",
-            `Mark "${nodeWrapper.labelText}" as ${isAccept ? 'Accepting' : 'Rejecting'}`,
+            `Mark "${node.labelText}" as ${isAccept ? 'Accepting' : 'Rejecting'}`,
             setNodeIsAcceptForward,
             setNodeIsAcceptBackward,
-            {'oldValue': oldValue, 'newValue': isAccept, 'nodeWrapper': nodeWrapper}
+            {'oldValue': oldValue, 'newValue': isAccept, 'node': node}
         );
         UndoRedoManager.pushAction(setNodeIsAcceptAction);
     }
 
-    public static setNodeIsStart(nodeWrapper: NodeWrapper) {
+    public static setNodeIsStart(node: NodeWrapper) {
         let oldStart = StateManager._startNode;
 
         let setNodeIsStartForward = (data: SetNodeIsStartActionData) => {
@@ -410,10 +409,10 @@ export default class StateManager {
 
         let setNodeIsStartAction = new Action(
             "setNodeIsStart",
-            `Set "${nodeWrapper?.labelText ?? 'none'}" As Initial Node`,
+            `Set "${node?.labelText ?? 'none'}" As Initial Node`,
             setNodeIsStartForward,
             setNodeIsStartBackward,
-            {'oldStart': oldStart, 'newStart': nodeWrapper}
+            {'oldStart': oldStart, 'newStart': node}
         );
         UndoRedoManager.pushAction(setNodeIsStartAction);
     }
@@ -529,17 +528,17 @@ export default class StateManager {
     }
 
     public static addTransition(source: NodeWrapper, dest: NodeWrapper) {
-        const newTransitionWrapper = new TransitionWrapper(source, dest);
+        const newTransition = new TransitionWrapper(source, dest);
 
         let addTransitionForward = (data: AddTransitionActionData) => {
             StateManager._transitionWrappers.push(data.transition);
-            StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
+            StateManager._transitionLayer.add(data.transition.konvaGroup);
             StateManager.updateTransitions();
         };
 
         let addTransitionBackward = (data: AddTransitionActionData) => {
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(i => i !== data.transition);
-            newTransitionWrapper.konvaGroup.remove();
+            data.transition.konvaGroup.remove();
             StateManager.updateTransitions();
         };
 
@@ -548,34 +547,34 @@ export default class StateManager {
             `Add Transition from "${source.labelText}" to "${dest.labelText}"`,
             addTransitionForward,
             addTransitionBackward,
-            { 'transition': newTransitionWrapper }
+            { 'transition': newTransition }
         );
         UndoRedoManager.pushAction(addTransitionAction);
     }
 
-    public static deleteTransition(transitionWrapper: TransitionWrapper) {
-        let deleteTransitionForward = (data: DeleteTransitionActionData) => {
-            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transitionWrapper);
+    public static removeTransition(transition: TransitionWrapper) {
+        let removeTransitionForward = (data: RemoveTransitionActionData) => {
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transition);
 
-            data.transitionWrapper.konvaGroup.remove();
+            data.transition.konvaGroup.remove();
             StateManager.updateTransitions();
         };
 
-        let deleteTransitionBackward = (data: DeleteTransitionActionData) => {
-            StateManager._transitionWrappers.push(data.transitionWrapper);
+        let removeTransitionBackward = (data: RemoveTransitionActionData) => {
+            StateManager._transitionWrappers.push(data.transition);
 
-            StateManager._transitionLayer.add(data.transitionWrapper.konvaGroup);
+            StateManager._transitionLayer.add(data.transition.konvaGroup);
             StateManager.updateTransitions();
         };
 
-        let deleteTransitionAction = new Action(
-            "deleteTransition",
-            `Delete Transition "${transitionWrapper.sourceNode.labelText}" to "${transitionWrapper.destNode.labelText}"`,
-                deleteTransitionForward,
-                deleteTransitionBackward,
-                { 'transitionWrapper': transitionWrapper }
+        let removeTransitionAction = new Action(
+            "removeTransition",
+            `Remove Transition "${transition.sourceNode.labelText}" to "${transition.destNode.labelText}"`,
+                removeTransitionForward,
+                removeTransitionBackward,
+                { 'transition': transition }
         );
-        UndoRedoManager.pushAction(deleteTransitionAction);
+        UndoRedoManager.pushAction(removeTransitionAction);
     }
 
     public static addToken() {
@@ -773,13 +772,13 @@ export default class StateManager {
     public static deleteAllSelectedObjects() {
         // Remove all states
         let selectedNodes = StateManager._selectedObjects.filter(i => i instanceof NodeWrapper);
-        selectedNodes.forEach(state => StateManager.removeState(state as NodeWrapper));
+        selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
 
         // NOTE: This may well break when a state and a transition connected
         // to it are both deleted at the same time! We'll have to figure out
         // how to handle that case.
         let selectedTransitions = StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper);
-        selectedTransitions.forEach(trans => StateManager.deleteTransition(trans as TransitionWrapper));
+        selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
 
         // Empty selection
         StateManager.setSelectedObjects([]);
@@ -1174,12 +1173,11 @@ interface SerializedTransition {
 class CreateNodeActionData extends ActionData {
     public x: number;
     public y: number;
-    public nodeWrapper: NodeWrapper;
-    public labelText: string;
+    public node: NodeWrapper;
 }
 
-class RemoveStateActionData extends ActionData {
-    public nodeWrapper: NodeWrapper;
+class RemoveNodeActionData extends ActionData {
+    public node: NodeWrapper;
     public transitions: Set<TransitionWrapper>;
     public isStart: boolean;
 }
@@ -1192,13 +1190,13 @@ class MoveStatesActionData extends ActionData {
 class SetNodeNameActionData extends ActionData {
     public oldName: string;
     public newName: string;
-    public nodeWrapper: NodeWrapper;
+    public node: NodeWrapper;
 }
 
 class SetNodeIsAcceptActionData extends ActionData {
     public oldValue: boolean;
     public newValue: boolean;
-    public nodeWrapper: NodeWrapper;
+    public node: NodeWrapper;
 }
 
 class SetNodeIsStartActionData extends ActionData {
@@ -1210,8 +1208,8 @@ class AddTransitionActionData extends ActionData {
     public transition: TransitionWrapper;
 }
 
-class DeleteTransitionActionData extends ActionData {
-    public transitionWrapper: TransitionWrapper;
+class RemoveTransitionActionData extends ActionData {
+    public transition: TransitionWrapper;
 }
 
 class SetTransitionAcceptsTokenData extends ActionData {
