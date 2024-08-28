@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import NodeWrapper from "../../NodeWrapper";
 import SelectableObject from "../../SelectableObject";
 import StateManager from "../../StateManager";
+import { useActionStack } from "../../utilities/ActionStackUtilities";
 
 interface DetailsBox_StateSelectionProps {
     nodeWrapper: NodeWrapper
@@ -52,6 +53,11 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
         setIsAcceptNode(isAccept);
         StateManager.setNodeIsAccept(nw, isAccept);
     };
+
+    const [currentStack, currentStackLocation] = useActionStack();
+    useEffect(() => {
+        setIsAcceptNode(nw.isAcceptNode);
+    }, [currentStackLocation]);
 
     return (
         <div className="flex flex-col">
