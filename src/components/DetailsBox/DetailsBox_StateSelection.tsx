@@ -34,7 +34,6 @@ function SetStartStateButton(props: SetStartStateButtonProps) {
 
 }
 
-
 export default function DetailsBox_StateSelection(props: DetailsBox_StateSelectionProps) {
     const nw = props.nodeWrapper;
     const [nodeLabelText, setLabelText] = useState(nw.labelText);
@@ -49,9 +48,10 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
         StateManager.setNodeName(nw, nodeLabelText);
     }, [nodeLabelText]);
 
-    useEffect(() => {
-        StateManager.setNodeIsAccept(nw, isAcceptNode);
-    }, [isAcceptNode]);
+    let updateNodeIsAccept = (isAccept: boolean) => {
+        setIsAcceptNode(isAccept);
+        StateManager.setNodeIsAccept(nw, isAccept);
+    };
 
     return (
         <div className="flex flex-col">
@@ -63,7 +63,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
             </div>
             <SetStartStateButton nodeWrapper={nw} startNode={props.startNode} setStartNode={props.setStartNode} />
             <div>
-                <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => setIsAcceptNode(e.target.checked)}></input>
+                <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => updateNodeIsAccept(e.target.checked)}></input>
                 <label htmlFor="is-accept-state">Accept State</label>
             </div>
         </div>
