@@ -11,14 +11,19 @@ interface DetailsBox_StateSelectionProps {
 }
 
 interface SetStartStateButtonProps {
-    nodeWrapper: NodeWrapper
-    startNode: NodeWrapper
-    setStartNode: React.Dispatch<React.SetStateAction<NodeWrapper>>
+    node: NodeWrapper;
 }
 
 function SetStartStateButton(props: SetStartStateButtonProps) {
+    const [isStartNodeInternal, setIsStartNodeInternal] = useState(StateManager.startNode === props.node);
+
+    const [_, currentStackLocation] = useActionStack();
+    useEffect(() => {
+        setIsStartNodeInternal(StateManager.startNode === props.node);
+    }, [currentStackLocation]);
+
     let classes = 'rounded-full p-2 m-1 mx-2 block ';
-    if (StateManager.startNode === props.nodeWrapper) {
+    if (isStartNodeInternal) {
         return (<button
             className={classes + 'bg-slate-400 text-gray-700'}
             disabled={true}>
@@ -28,7 +33,7 @@ function SetStartStateButton(props: SetStartStateButtonProps) {
     else {
         return <button
             className={classes + 'bg-emerald-500 text-white'}
-            onClick={e => props.setStartNode(props.nodeWrapper)}>
+            onClick={_ => StateManager.setNodeIsStart(props.node)}>
             Set Start State
         </button>
     }
@@ -54,7 +59,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
         StateManager.setNodeIsAccept(nw, isAccept);
     };
 
-    const [currentStack, currentStackLocation] = useActionStack();
+    const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
         setIsAcceptNode(nw.isAcceptNode);
     }, [currentStackLocation]);
@@ -67,7 +72,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
                 <input className="flex-1 bg-transparent" type="text" placeholder="State name" value={nodeLabelText} onChange={e => setLabelText(e.target.value)}></input>
 
             </div>
-            <SetStartStateButton nodeWrapper={nw} startNode={props.startNode} setStartNode={props.setStartNode} />
+            <SetStartStateButton node={nw} />
             <div>
                 <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => updateNodeIsAccept(e.target.checked)}></input>
                 <label htmlFor="is-accept-state">Accept State</label>
