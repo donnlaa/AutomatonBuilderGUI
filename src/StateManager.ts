@@ -306,10 +306,14 @@ export default class StateManager {
             });
 
             data.transitions.forEach(transition => {
+                transition.deselect();
                 transition.konvaGroup.remove();
             });
 
             StateManager.updateTransitions();
+
+            // Disable the node's selected appearance
+            data.node.deselect();
 
             // Remove the node itself
             StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
@@ -556,6 +560,7 @@ export default class StateManager {
         let removeTransitionForward = (data: RemoveTransitionActionData) => {
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transition);
 
+            data.transition.deselect();
             data.transition.konvaGroup.remove();
             StateManager.updateTransitions();
         };
