@@ -92,12 +92,6 @@ function App() {
         StateManager.useDarkMode = useDarkMode;
     }, [useDarkMode]);
 
-    // The purpose of this is to allow us to force the GUI to refresh
-    // whenever the automaton is changed, so we can check for errors again.
-    // This may be a hacky solution that we should revisit.
-    const [lastUpdated, setLastUpdated] = useState(0);
-    
-
     // Create a DFA from the current state, and get the errors from it
     let dfa = StateManager.dfa;
     let dfaErrors = dfa.getErrors();
@@ -117,7 +111,6 @@ function App() {
                             selection={selectedObjects}
                             startNode={startNode}
                             setStartNode={setStartNode}
-                            setLastUpdated={setLastUpdated}
                         />
 
                         {errorBoxes}
