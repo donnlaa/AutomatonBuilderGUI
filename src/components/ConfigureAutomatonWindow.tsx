@@ -7,7 +7,6 @@ import { useActionStack } from "../utilities/ActionStackUtilities";
 
 interface ListItem_TokenEditorProps {
     token: TokenWrapper
-    removeFunc: (tk: TokenWrapper) => void
 }
 
 function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEditorProps>) {
@@ -30,7 +29,7 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
                 <div className="flex-1 grow float-left">
                     <input className="focus:outline-none bg-transparent" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => updateTokenSymbol(e.target.value)}></input>
                 </div>
-                <button className="flex-0 float-right px-2 block text-center text-red-500 align-middle" onClick={() => props.removeFunc(tw)}>
+                <button className="flex-0 float-right px-2 block text-center text-red-500 align-middle" onClick={() => StateManager.removeToken(tw)}>
                     <BsXCircleFill />
                 </button>
             </div>
@@ -47,22 +46,22 @@ function AlphabetList() {
 
     function addTokenToAlphabet() {
         StateManager.addToken();
-        setAlphabet(StateManager.alphabet);
+        // setAlphabet(StateManager.alphabet);
         // const newAlphabet = [...alphabet];
         // newAlphabet.push(new TokenWrapper());
         // setAlphabet(newAlphabet);
-    }
-
-    function removeTokenFromAlphabet(tk: TokenWrapper) {
-        const newAlphabet = alphabet.filter(i => i !== tk);
-        setAlphabet(newAlphabet);
     }
 
     // useEffect(() => {
     //     StateManager.alphabet = alphabet;
     // }, [alphabet]);
 
-    const tokenWrapperElements = alphabet.map(tw => <ListItem_TokenEditor token={tw} removeFunc={removeTokenFromAlphabet} key={tw.id} />);
+    const [_, currentStackLocation] = useActionStack();
+    useEffect(() => {
+        setAlphabet(StateManager.alphabet);
+    }, [currentStackLocation]);
+
+    const tokenWrapperElements = alphabet.map(tw => <ListItem_TokenEditor token={tw} key={tw.id} />);
 
     return (<>
         <div className="mt-3 ml-1 mb-1">
