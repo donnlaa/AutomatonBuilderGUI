@@ -3,26 +3,32 @@ import TokenWrapper from "../TokenWrapper";
 import StateManager from "../StateManager";
 import { CoreListItem, CoreListItem_Left, ListItem } from "./ListItem";
 import { BsPlusCircleFill, BsXCircleFill } from "react-icons/bs";
+import { useActionStack } from "../utilities/ActionStackUtilities";
 
 interface ListItem_TokenEditorProps {
-    tokenWrapper: TokenWrapper
+    token: TokenWrapper
     removeFunc: (tk: TokenWrapper) => void
 }
 
 function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEditorProps>) {
-    const tw = props.tokenWrapper;
+    const tw = props.token;
     const [tokenSymbol, setTokenSymbol] = useState(tw.symbol);
 
+    let updateTokenSymbol = (newSymbol: string) => {
+        setTokenSymbol(newSymbol);
+        StateManager.setTokenSymbol(tw, newSymbol);
+    };
+    
+    const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
-        // tw.symbol = tokenSymbol;
-        StateManager.setTokenSymbol(tw, tokenSymbol);
-    }, [tokenSymbol]);
+        setTokenSymbol(tw.symbol);
+    }, [currentStackLocation]);
 
     return (
         <CoreListItem>
             <div className="flex flex-row">
                 <div className="flex-1 grow float-left">
-                    <input className="focus:outline-none bg-transparent" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value)}></input>
+                    <input className="focus:outline-none bg-transparent" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => updateTokenSymbol(e.target.value)}></input>
                 </div>
                 <button className="flex-0 float-right px-2 block text-center text-red-500 align-middle" onClick={() => props.removeFunc(tw)}>
                     <BsXCircleFill />
@@ -56,7 +62,7 @@ function AlphabetList() {
     //     StateManager.alphabet = alphabet;
     // }, [alphabet]);
 
-    const tokenWrapperElements = alphabet.map(tw => <ListItem_TokenEditor tokenWrapper={tw} removeFunc={removeTokenFromAlphabet} key={tw.id} />);
+    const tokenWrapperElements = alphabet.map(tw => <ListItem_TokenEditor token={tw} removeFunc={removeTokenFromAlphabet} key={tw.id} />);
 
     return (<>
         <div className="mt-3 ml-1 mb-1">
