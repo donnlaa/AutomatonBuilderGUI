@@ -775,14 +775,28 @@ export default class StateManager {
     }
 
     public static deleteAllSelectedObjects() {
+        let selectedNodes = new Set<NodeWrapper>(StateManager._selectedObjects.filter(i => i instanceof NodeWrapper).map(i => i as NodeWrapper));
+        let selectedTransitions = new Set<TransitionWrapper>(StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper).map(i => i as TransitionWrapper));
+
+        // Find the transitions we have selected that are already going to be deleted
+        // by a node deletion operation
+        let extraTransitions = new Set<TransitionWrapper>();
+        selectedTransitions.forEach((transition) => {
+            if (selectedNodes.has(transition.sourceNode) || selectedNodes.has(transition.destNode)) {
+                extraTransitions.add(transition);
+            }
+        });
+        
+        // Remove the transitions that were already going to be deleted,
+        // so we don't delete them twice
+        extraTransitions.forEach((transition) => {
+            selectedTransitions.delete(transition);
+        });
+        
         // Remove all states
-        let selectedNodes = StateManager._selectedObjects.filter(i => i instanceof NodeWrapper);
         selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
 
-        // NOTE: This may well break when a state and a transition connected
-        // to it are both deleted at the same time! We'll have to figure out
-        // how to handle that case.
-        let selectedTransitions = StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper);
+        // Remove all transitions (that aren't connected to selected states)
         selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
 
         // Empty selection
