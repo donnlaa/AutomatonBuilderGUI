@@ -45,14 +45,10 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
     const [nodeLabelText, setLabelText] = useState(nw.labelText);
     const [isAcceptNode, setIsAcceptNode] = useState(nw.isAcceptNode);
 
-    // TODO: These may be triggered, and thus register actions, when the nodes
-    // are clicked even though the user didn't do anything.
-    // To fix this, the functions may need to be called more explicitly from
-    // the onChange callers?
-    // (Maybe we don't need these useEffect calls at all?)
-    useEffect(() => {
-        StateManager.setNodeName(nw, nodeLabelText);
-    }, [nodeLabelText]);
+    let updateNodeName = (newName: string) => {
+        setLabelText(newName);
+        StateManager.setNodeName(nw, newName);
+    };
 
     let updateNodeIsAccept = (isAccept: boolean) => {
         setIsAcceptNode(isAccept);
@@ -61,6 +57,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
 
     const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
+        setLabelText(nw.labelText);
         setIsAcceptNode(nw.isAcceptNode);
     }, [currentStackLocation]);
 
@@ -69,7 +66,7 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
             <div className="font-medium text-2xl">State</div>
             <div className="flex flex-row">
                 <div className="flex-1 mr-4">Name</div>
-                <input className="flex-1 bg-transparent" type="text" placeholder="State name" value={nodeLabelText} onChange={e => setLabelText(e.target.value)}></input>
+                <input className="flex-1 bg-transparent" type="text" placeholder="State name" value={nodeLabelText} onChange={e => updateNodeName(e.target.value)}></input>
 
             </div>
             <SetStartStateButton node={nw} />
