@@ -14,6 +14,7 @@ import TestStringWindow from './components/TestStringWindow';
 import InformationBox, { InformationBoxType } from './components/InformationBox';
 import { testStringOnAutomata } from './components/TestStringOnAutomata';
 import {  } from './components/TestStringWindow';
+import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
 
 function App() {
     const [currentTool, setCurrentTool] = useState(Tool.States);
@@ -70,7 +71,7 @@ function App() {
     }, [selectedObjects]);
 
     useEffect(() => {
-        StateManager.startNode = startNode;
+        StateManager.setNodeIsStart(startNode);
     }, [startNode]);
 
     const emptyStringToken = StateManager.alphabet.some(token => token.symbol.trim() === '');
@@ -91,12 +92,6 @@ function App() {
         StateManager.useDarkMode = useDarkMode;
     }, [useDarkMode]);
 
-    // The purpose of this is to allow us to force the GUI to refresh
-    // whenever the automaton is changed, so we can check for errors again.
-    // This may be a hacky solution that we should revisit.
-    const [lastUpdated, setLastUpdated] = useState(0);
-    
-
     // Create a DFA from the current state, and get the errors from it
     let dfa = StateManager.dfa;
     let dfaErrors = dfa.getErrors();
@@ -116,7 +111,6 @@ function App() {
                             selection={selectedObjects}
                             startNode={startNode}
                             setStartNode={setStartNode}
-                            setLastUpdated={setLastUpdated}
                         />
 
                         {errorBoxes}
@@ -178,6 +172,11 @@ function App() {
                                 </div>
                             </button>
                         </div>
+                    </FloatingPanel>
+                </div>
+                <div>
+                    <FloatingPanel heightPolicy='min' style={{ width: '250px' }}>
+                        <DetailsBox_ActionStackViewer />
                     </FloatingPanel>
                 </div>
 

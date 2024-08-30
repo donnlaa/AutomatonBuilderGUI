@@ -36,6 +36,7 @@ export default function DetailsBox_AlphabetEditor() {
 
     function removeTokenFromAlphabet(tk: TokenWrapper) {
         const newAlphabet = alphabet.filter(i => i !== tk);
+        StateManager.removeToken(tk);
         setAlphabet(newAlphabet);
     }
 

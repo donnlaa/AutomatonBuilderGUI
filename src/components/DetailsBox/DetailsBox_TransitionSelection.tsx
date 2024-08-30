@@ -4,53 +4,68 @@ import SelectableObject from "../../SelectableObject";
 import StateManager from "../../StateManager";
 import TransitionWrapper from "../../TransitionWrapper";
 import TokenWrapper from "../../TokenWrapper";
+import { useActionStack } from "../../utilities/ActionStackUtilities";
 
 interface DetailsBox_TransitionSelectionProps {
-    transitionWrapper: TransitionWrapper;
-    setLastUpdated: React.Dispatch<React.SetStateAction<number>>;
+    transition: TransitionWrapper;
 }
 
 interface DetailsBox_TransitionTokenCheckBoxProps {
-    transitionWrapper: TransitionWrapper;
-    tokenWrapper: TokenWrapper;
-    setLastUpdated: React.Dispatch<React.SetStateAction<number>>;
+    transition: TransitionWrapper;
+    token: TokenWrapper;
 }
 
 function DetailsBox_TransitionTokenCheckBox(props: DetailsBox_TransitionTokenCheckBoxProps) {
-    const token = props.tokenWrapper;
-    const transition = props.transitionWrapper;
+    const token = props.token;
+    const transition = props.transition;
 
     const [tokenIsIncluded, setTokenIsIncluded] = useState(transition.hasToken(token));
+
+    let updateTokenIsIncluded = (isIncluded: boolean) => {
+        setTokenIsIncluded(isIncluded);
+
+        if (isIncluded) {
+            StateManager.setTransitionAcceptsToken(transition, token);
+        } else {
+            StateManager.setTransitionDoesntAcceptToken(transition, token);
+        }
+    };
+
+    const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
-        if (tokenIsIncluded) {
-            transition.addToken(token);
-        }
-        else {
-            transition.removeToken(token);
-        }
-        props.setLastUpdated(new Date().getTime());
-    }, [tokenIsIncluded]);
+        setTokenIsIncluded(transition.hasToken(token));
+    }, [currentStackLocation]);
 
     return (
         <div key={token.id}>
-            <input type="checkbox" id="is-epsilon-transition" name={`transition-accepts-${token.id}`} checked={tokenIsIncluded} onChange={e => setTokenIsIncluded(e.target.checked)}></input>
+            <input type="checkbox" id="is-epsilon-transition" name={`transition-accepts-${token.id}`} checked={tokenIsIncluded} onChange={e => updateTokenIsIncluded(e.target.checked)}></input>
             <label htmlFor={`transition-accepts-${token.id}`}>{token.symbol}</label>
         </div>
     )
 }
 
 export default function DetailsBox_TransitionSelection(props: DetailsBox_TransitionSelectionProps) {
-    const tw = props.transitionWrapper;
+    const tw = props.transition;
 
     const srcNode = tw.sourceNode;
     const dstNode = tw.destNode;
 
     const [isEpsilonTransition, setEpsilonTransition] = useState(tw.isEpsilonTransition);
 
+    let updateIsEpsilonTransition = (isEpsilon: boolean) => {
+        setEpsilonTransition(isEpsilon);
+
+        if (isEpsilon) {
+            StateManager.setTransitionAcceptsEpsilon(tw);
+        } else {
+            StateManager.setTransitionDoesntAcceptEpsilon(tw);
+        }
+    };
+
+    const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
-        tw.isEpsilonTransition = isEpsilonTransition;
-        props.setLastUpdated(new Date().getTime());
-    }, [isEpsilonTransition]);
+        setEpsilonTransition(tw.isEpsilonTransition);
+    }, [currentStackLocation]);
 
     return (
         <div className="flex flex-col">
@@ -60,10 +75,10 @@ export default function DetailsBox_TransitionSelection(props: DetailsBox_Transit
                 Transition on:
             </div>
             <div>
-                <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={isEpsilonTransition} onChange={e => setEpsilonTransition(e.target.checked)}></input>
+                <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={isEpsilonTransition} onChange={e => updateIsEpsilonTransition(e.target.checked)}></input>
                 <label htmlFor="is-epsilon-transition">ε</label>
             </div>
-            {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transitionWrapper={tw} tokenWrapper={token} setLastUpdated={props.setLastUpdated}/>)}
+            {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transition={tw} token={token} />)}
         </div>
     );
 }

@@ -10,6 +10,8 @@ import DFA from "automaton-kit/lib/dfa/DFA";
 import DFATransition from "automaton-kit/lib/dfa/DFATransition";
 import DFAState from "automaton-kit/lib/dfa/DFAState";
 import { convertIDtoLabelOrSymbol } from "./utilities/AutomatonUtilities";
+import UndoRedoManager, { Action, ActionData } from "./UndoRedoManager";
+import { Vector2d } from "konva/lib/types";
 
 export default class StateManager {
     static _nextStateId = 0;
@@ -260,22 +262,163 @@ export default class StateManager {
             y = Math.round(y / gridSpacing) * gridSpacing;
         }
 
-        const newStateWrapper = new NodeWrapper(x, y);
-        StateManager._nodeWrappers.push(newStateWrapper);
-        StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
+        const newStateWrapperName = `q${StateManager._nextStateId++}`;
+        const newStateWrapper = new NodeWrapper(newStateWrapperName);
+        let addNodeForward = (data: CreateNodeActionData) => {
+            newStateWrapper.createKonvaObjects(data.x, data.y);
+            StateManager._nodeWrappers.push(newStateWrapper);
+            StateManager._nodeLayer?.add(newStateWrapper.nodeGroup);
 
-        if (StateManager._startNode === null) {
-            StateManager.startNode = newStateWrapper;
-        }
+            if (StateManager._startNode === null) {
+                StateManager.startNode = newStateWrapper;
+            }
 
-        StateManager._nodeLayer?.draw();
+            StateManager._nodeLayer?.draw();
+
+            data.node = newStateWrapper;
+        };
+
+        let addNodeBackward = (data: CreateNodeActionData) => {
+            this.deleteNode(data.node);
+        };
+
+        let addNodeAction = new Action(
+            "addNode",
+            `Add "${newStateWrapperName}"`,
+            addNodeForward,
+            addNodeBackward,
+            {'x': x, 'y': y, "node": null}
+        );
+        UndoRedoManager.pushAction(addNodeAction);
     }
 
+    public static removeNode(node: NodeWrapper) {
+        // Find all transitions involving this node, save those
+        let transitionsInvolvingThisNode = new Set(this._transitionWrappers.filter(i => i.involvesNode(node)));
 
+        // Save this node's start state status
+        let isStart = StateManager.startNode === node;
 
-    public static addTransition(transition: TransitionWrapper) {
-        console.log('Adding transition to the array');
-        StateManager._transitionWrappers.push(transition);
+        let removeNodeForward = (data: RemoveNodeActionData) => {
+            // Remove all transitions involving this node from the current state machine
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(transition => {
+                return !transitionsInvolvingThisNode.has(transition);
+            });
+
+            data.transitions.forEach(transition => {
+                transition.deselect();
+                transition.konvaGroup.remove();
+            });
+
+            StateManager.updateTransitions();
+
+            // Disable the node's selected appearance
+            data.node.deselect();
+
+            // Remove the node itself
+            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
+                return node !== node;
+            });
+            data.node.nodeGroup.remove();
+
+            // Clear start state, if this node was the start state
+            if (data.isStart) {
+                StateManager.startNode = null;
+            }
+        };
+
+        let removeNodeBackward = (data: RemoveNodeActionData) => {
+            // Add the node itself
+            StateManager._nodeWrappers.push(data.node);
+
+            // Create Konva objects
+            StateManager._nodeLayer.add(data.node.nodeGroup);
+
+            // Set state start
+            if (data.isStart) {
+                StateManager.startNode = data.node;
+            }
+
+            // Add all transitions involving this node to the current state machine
+            data.transitions.forEach(transition => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+            StateManager.updateTransitions();
+        };
+
+        let removeNodeAction = new Action(
+            "removeNode",
+            `Delete Node "${node.labelText}"`,
+            removeNodeForward,
+            removeNodeBackward,
+            { 'node': node, 'transitions': transitionsInvolvingThisNode, 'isStart': isStart }
+        );
+        UndoRedoManager.pushAction(removeNodeAction);
+
+    }
+
+    public static setNodeName(node: NodeWrapper, newName: string) {
+        let oldName = node.labelText;
+
+        let setNodeNameForward = (data: SetNodeNameActionData) => {
+            data.node.labelText = data.newName;
+        };
+
+        let setNodeNameBackward = (data: SetNodeNameActionData) => {
+            data.node.labelText = data.oldName;
+        };
+
+        let setNodeNameAction = new Action(
+            "setNodeName",
+            `Rename "${oldName}" To "${newName}"`,
+            setNodeNameForward,
+            setNodeNameBackward,
+            {'oldName': oldName, 'newName': newName, 'node': node}
+        );
+        UndoRedoManager.pushAction(setNodeNameAction);
+    }
+
+    public static setNodeIsAccept(node: NodeWrapper, isAccept: boolean) {
+        let oldValue = node.isAcceptNode
+
+        let setNodeIsAcceptForward = (data: SetNodeIsAcceptActionData) => {
+            data.node.isAcceptNode = data.newValue;
+        };
+
+        let setNodeIsAcceptBackward = (data: SetNodeIsAcceptActionData) => {
+            data.node.isAcceptNode = data.oldValue;
+        };
+
+        let setNodeIsAcceptAction = new Action(
+            "setNodeIsAccept",
+            `Mark "${node.labelText}" as ${isAccept ? 'Accepting' : 'Rejecting'}`,
+            setNodeIsAcceptForward,
+            setNodeIsAcceptBackward,
+            {'oldValue': oldValue, 'newValue': isAccept, 'node': node}
+        );
+        UndoRedoManager.pushAction(setNodeIsAcceptAction);
+    }
+
+    public static setNodeIsStart(node: NodeWrapper) {
+        let oldStart = StateManager._startNode;
+
+        let setNodeIsStartForward = (data: SetNodeIsStartActionData) => {
+            StateManager.startNode = data.newStart;
+        };
+
+        let setNodeIsStartBackward = (data: SetNodeIsStartActionData) => {
+            StateManager.startNode = data.oldStart;
+        };
+
+        let setNodeIsStartAction = new Action(
+            "setNodeIsStart",
+            `Set "${node?.labelText ?? 'none'}" As Initial Node`,
+            setNodeIsStartForward,
+            setNodeIsStartBackward,
+            {'oldStart': oldStart, 'newStart': node}
+        );
+        UndoRedoManager.pushAction(setNodeIsStartAction);
     }
 
     public static set startNode(node: NodeWrapper | null) {
@@ -306,10 +449,23 @@ export default class StateManager {
         if (n === 'INPUT' || n === 'TEXTAREA') {
             return;
         }
+
         if (ev.code === "Backspace" || ev.code === "Delete") {
             StateManager.deleteAllSelectedObjects();
+            return;
         }
 
+        // https://stackoverflow.com/a/77837006
+        if ((ev.metaKey || ev.ctrlKey) && ev.key == "z") {
+            ev.preventDefault();
+
+            if (ev.shiftKey) {
+                UndoRedoManager.redo();
+            } else {
+                UndoRedoManager.undo();
+            }
+            return;
+        }
     }
 
     public static startTentativeTransition(sourceNode: NodeWrapper) {
@@ -363,10 +519,7 @@ export default class StateManager {
                 StateManager.selectObject(existingTransition);
             }
             else {
-                const newTransitionWrapper = new TransitionWrapper(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
-                StateManager._transitionWrappers.push(newTransitionWrapper);
-                StateManager._transitionLayer.add(newTransitionWrapper.konvaGroup);
-                StateManager._transitionLayer.draw();
+                StateManager.addTransition(StateManager._tentativeTransitionSource, StateManager._tentativeTransitionTarget);
             }
         }
 
@@ -378,6 +531,212 @@ export default class StateManager {
         StateManager._tentConnectionLine.visible(false);
     }
 
+    public static addTransition(source: NodeWrapper, dest: NodeWrapper) {
+        const newTransition = new TransitionWrapper(source, dest);
+
+        let addTransitionForward = (data: AddTransitionActionData) => {
+            StateManager._transitionWrappers.push(data.transition);
+            StateManager._transitionLayer.add(data.transition.konvaGroup);
+            StateManager.updateTransitions();
+        };
+
+        let addTransitionBackward = (data: AddTransitionActionData) => {
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(i => i !== data.transition);
+            data.transition.konvaGroup.remove();
+            StateManager.updateTransitions();
+        };
+
+        let addTransitionAction = new Action(
+            "addTransition",
+            `Add Transition from "${source.labelText}" to "${dest.labelText}"`,
+            addTransitionForward,
+            addTransitionBackward,
+            { 'transition': newTransition }
+        );
+        UndoRedoManager.pushAction(addTransitionAction);
+    }
+
+    public static removeTransition(transition: TransitionWrapper) {
+        let removeTransitionForward = (data: RemoveTransitionActionData) => {
+            StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transition);
+
+            data.transition.deselect();
+            data.transition.konvaGroup.remove();
+            StateManager.updateTransitions();
+        };
+
+        let removeTransitionBackward = (data: RemoveTransitionActionData) => {
+            StateManager._transitionWrappers.push(data.transition);
+
+            StateManager._transitionLayer.add(data.transition.konvaGroup);
+            StateManager.updateTransitions();
+        };
+
+        let removeTransitionAction = new Action(
+            "removeTransition",
+            `Remove Transition "${transition.sourceNode.labelText}" to "${transition.destNode.labelText}"`,
+                removeTransitionForward,
+                removeTransitionBackward,
+                { 'transition': transition }
+        );
+        UndoRedoManager.pushAction(removeTransitionAction);
+    }
+
+    public static addToken() {
+        // TODO: logic for removing tokens needs to be modified - right now
+        // it looks like it does some checks that we may no longer want, now
+        // that we have undo/redo!
+        const newToken = new TokenWrapper();
+        let addTokenForward = (data: AddTokenActionData) => {
+            StateManager._alphabet.push(data.token);
+        };
+        let addTokenBackward = (data: AddTokenActionData) => {
+            StateManager._alphabet = StateManager._alphabet.filter(i => i !== data.token);
+        };
+
+        let addTokenAction = new Action(
+            "addToken",
+            "Add Token",
+            addTokenForward,
+            addTokenBackward,
+            { 'token': newToken }
+        );
+        UndoRedoManager.pushAction(addTokenAction);
+    }
+
+    public static removeToken(token: TokenWrapper) {
+        let transitionsUsingToken = StateManager._transitionWrappers.filter(trans => trans.hasToken(token));
+
+        let removeTokenForward = (data: RemoveTokenActionData) => {
+            StateManager._alphabet = StateManager._alphabet.filter(i => i !== data.token);
+            transitionsUsingToken.forEach(trans => trans.removeToken(token));
+        };
+
+        let removeTokenBackward = (data: RemoveTokenActionData) => {
+            StateManager._alphabet.push(data.token);
+            transitionsUsingToken.forEach(trans => trans.addToken(token));
+        };
+
+        let removeTokenAction = new Action(
+            "removeToken",
+            `Remove Token "${token.symbol}"`,
+            removeTokenForward,
+            removeTokenBackward,
+            { 'token': token, 'transitionsUsingToken': transitionsUsingToken }
+        );
+        UndoRedoManager.pushAction(removeTokenAction);
+    }
+
+    public static setTokenSymbol(token: TokenWrapper, newSymbol: string) {
+        let oldSymbol = token.symbol;
+
+        let setTokenSymbolForward = (data: SetTokenSymbolActionData) => {
+            data.token.symbol = data.newSymbol;
+        };
+
+        let setTokenSymbolBackward = (data: SetTokenSymbolActionData) => {
+            data.token.symbol = data.oldSymbol;
+        };
+
+        let setTokenSymbolAction = new Action(
+            "setTokenSymbol",
+            `Rename Token "${oldSymbol}" To "${newSymbol}"`,
+            setTokenSymbolForward,
+            setTokenSymbolBackward,
+            {'oldSymbol': oldSymbol, 'newSymbol': newSymbol, 'token': token}
+        );
+        UndoRedoManager.pushAction(setTokenSymbolAction);
+    }
+
+    public static setTransitionAcceptsToken(transition: TransitionWrapper, token: TokenWrapper) {
+        let hadTokenBefore = transition.hasToken(token);
+        let setTransitionAcceptsTokenForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.addToken(data.token);
+        };
+
+        let setTransitionAcceptsTokenBackward = (data: SetTransitionAcceptsTokenData) => {
+            if (hadTokenBefore) {
+                data.transition.addToken(data.token);
+            }
+            else {
+                data.transition.removeToken(data.token);
+            }
+        };
+
+        let setTransitionAcceptsTokenAction = new Action(
+            "setTransitionAcceptsToken",
+            `Use Token "${token.symbol}" For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionAcceptsTokenForward,
+            setTransitionAcceptsTokenBackward,
+            { 'transition': transition, 'token': token }
+        );
+        UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
+    }
+
+    public static setTransitionDoesntAcceptToken(transition: TransitionWrapper, token: TokenWrapper) {
+        let hadTokenBefore = transition.hasToken(token);
+        let setTransitionDoesntAcceptTokenForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.removeToken(data.token);
+        };
+
+        let setTransitionDoesntAcceptTokenBackward = (data: SetTransitionAcceptsTokenData) => {
+            if (hadTokenBefore) {
+                data.transition.addToken(data.token);
+            }
+            else {
+                data.transition.removeToken(data.token);
+            }
+        };
+
+        let setTransitionDoesntAcceptTokenAction = new Action(
+            "setTransitionDoesntAcceptToken",
+            `Don't Use Token "${token.symbol}" For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionDoesntAcceptTokenForward,
+            setTransitionDoesntAcceptTokenBackward,
+            { 'transition': transition, 'token': token }
+        );
+        UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
+    }
+
+    public static setTransitionAcceptsEpsilon(transition: TransitionWrapper) {
+        let hadEpsilonBefore = transition.isEpsilonTransition;
+
+        let setTransitionAcceptsEpsilonForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = true;
+        };
+
+        let setTransitionAcceptsEpsilonBackward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = hadEpsilonBefore;
+        };
+        let setTransitionAcceptsTokenAction = new Action(
+            "setTransitionAcceptsEpsilon",
+            `Use ε For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionAcceptsEpsilonForward,
+            setTransitionAcceptsEpsilonBackward,
+            { 'transition': transition, 'token': null }
+        );
+        UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
+    }
+
+    public static setTransitionDoesntAcceptEpsilon(transition: TransitionWrapper) {
+        let hadEpsilonBefore = transition.isEpsilonTransition;
+
+        let setTransitionDoesntAcceptEpsilonForward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = false;
+        };
+
+        let setTransitionDoesntAcceptEpsilonBackward = (data: SetTransitionAcceptsTokenData) => {
+            data.transition.isEpsilonTransition = hadEpsilonBefore;
+        }
+        let setTransitionDoesntAcceptTokenAction = new Action(
+            "setTransitionDoesntAcceptEpsilon",
+            `Don't Use ε For Transition "${transition.sourceNode.labelText}" To "${transition.destNode.labelText}"`,
+            setTransitionDoesntAcceptEpsilonForward,
+            setTransitionDoesntAcceptEpsilonBackward,
+            { 'transition': transition, 'token': null }
+        );
+        UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
+    }
 
     public static get tentativeTransitionInProgress() {
         return StateManager._tentativeTransitionSource !== null;
@@ -416,31 +775,55 @@ export default class StateManager {
     }
 
     public static deleteAllSelectedObjects() {
-        // Find all transitions dependent on selected nodes
-        const nodesToRemove = StateManager._nodeWrappers.filter((i) => StateManager._selectedObjects.includes(i));
-        const transitionsDependentOnDeletedNodes: Array<TransitionWrapper> = [];
-        nodesToRemove.forEach((node) => {
-            StateManager._transitionWrappers.forEach((trans) => {
-                if (trans.involvesNode(node) && !transitionsDependentOnDeletedNodes.includes(trans)) {
-                    transitionsDependentOnDeletedNodes.push(trans);
-                }
-            });
+        let selectedNodes = new Set<NodeWrapper>(StateManager._selectedObjects.filter(i => i instanceof NodeWrapper).map(i => i as NodeWrapper));
+        let selectedTransitions = new Set<TransitionWrapper>(StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper).map(i => i as TransitionWrapper));
+
+        // Find the transitions we have selected that are already going to be deleted
+        // by a node deletion operation
+        let extraTransitions = new Set<TransitionWrapper>();
+        selectedTransitions.forEach((transition) => {
+            if (selectedNodes.has(transition.sourceNode) || selectedNodes.has(transition.destNode)) {
+                extraTransitions.add(transition);
+            }
         });
-        // Keep transitions that aren't in the selected objects, AND aren't dependent on selected objects
-        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => !StateManager._selectedObjects.includes(i) && !transitionsDependentOnDeletedNodes.includes(i));
+        
+        // Remove the transitions that were already going to be deleted,
+        // so we don't delete them twice
+        extraTransitions.forEach((transition) => {
+            selectedTransitions.delete(transition);
+        });
+        
+        // Remove all states
+        selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
 
-        // Next, delete all selected nodes
-        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => !StateManager._selectedObjects.includes(i));
+        // Remove all transitions (that aren't connected to selected states)
+        selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
 
-        StateManager._selectedObjects.forEach((obj) => obj.deleteKonvaObjects());
-        transitionsDependentOnDeletedNodes.forEach((obj) => obj.deleteKonvaObjects());
-
-        if (nodesToRemove.includes(StateManager._startNode)) {
-            StateManager.startNode = null;
-        }
-
+        // Empty selection
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
+    }
+
+    public static deleteNode(node: NodeWrapper) {
+        const transitionsDependentOnDeletedNode: Array<TransitionWrapper> = [];
+        StateManager._transitionWrappers.forEach((trans) => {
+            if (trans.involvesNode(node) && !transitionsDependentOnDeletedNode.includes(trans)) {
+                transitionsDependentOnDeletedNode.push(trans);
+            }
+        });
+
+        StateManager._transitionWrappers = StateManager._transitionWrappers.filter((i) => {
+            !transitionsDependentOnDeletedNode.includes(i);
+        });
+
+        StateManager._nodeWrappers = StateManager._nodeWrappers.filter((i) => node != i);
+        // node.deleteKonvaObjects();
+        node.nodeGroup.remove();
+        transitionsDependentOnDeletedNode.forEach((obj) => obj.konvaGroup.remove());
+
+        if (node == StateManager._startNode) {
+            StateManager.startNode = null;
+        }
     }
 
     // method to zoom in or out when the mouse wheel is scrolled.
@@ -538,24 +921,21 @@ export default class StateManager {
 
 
     public static set alphabet(newAlphabet: Array<TokenWrapper>) {
-        const oldAlphabet = StateManager._alphabet;
+        // const oldAlphabet = StateManager._alphabet;
         StateManager._alphabet = newAlphabet;
 
-        oldAlphabet.forEach(tok => {
-            if (!newAlphabet.includes(tok)) {
-                // The token tok was removed from the alphabet, so we need
-                // to remove it from any transitions!
-                StateManager._transitionWrappers.forEach(transition => {
-                    transition.removeToken(tok);
-                });
-            }
-        });
-
-        console.log('alphabet is', StateManager._alphabet);
+        // oldAlphabet.forEach(tok => {
+        //     if (!newAlphabet.includes(tok)) {
+        //         // The token tok was removed from the alphabet, so we need
+        //         // to remove it from any transitions!
+        //         StateManager._transitionWrappers.forEach(transition => {
+        //             transition.removeToken(tok);
+        //         });
+        //     }
+        // });
     }
 
     public static get alphabet() {
-        console.log('alphabet is', StateManager._alphabet);
         return [...StateManager._alphabet];
     }
 
@@ -635,7 +1015,8 @@ export default class StateManager {
 
         // Load each state
         states.forEach(state => {
-            const newState = new NodeWrapper(state.x, state.y, state.label, acceptStates.includes(state.id), state.id);
+            const newState = new NodeWrapper(state.label, state.id);
+            newState.createKonvaObjects(state.x, state.y);
             StateManager._nodeWrappers.push(newState);
             StateManager._nodeLayer.add(newState.nodeGroup);
         });
@@ -712,6 +1093,72 @@ export default class StateManager {
     public static get useDarkMode() {
         return this._useDarkMode;
     }
+
+    private static _dragStatesStartPosition: Vector2d | null = null;
+
+    public static startDragStatesOperation(startPos: Vector2d) {
+        this._dragStatesStartPosition = startPos;
+    }
+
+    public static completeDragStatesOperation(finalPos: Vector2d) {
+        let startPos = this._dragStatesStartPosition;
+        let endPos = finalPos;
+        let delta: Vector2d = {x: endPos.x - startPos.x, y: endPos.y - startPos.y};
+
+        let moveStatesForward = (data: MoveStatesActionData) => {
+            data.states.forEach((state) => {
+                state.setPosition({
+                    x: state.nodeGroup.position().x + delta.x,
+                    y: state.nodeGroup.position().y + delta.y
+                });
+
+                if (StateManager.startNode === state) {
+                    this.updateStartNodePosition();
+                }
+            });
+            StateManager.updateTransitions();
+        };
+
+        let moveStatesBackward = (data: MoveStatesActionData) => {
+            data.states.forEach((state) => {
+                state.setPosition({
+                    x: state.nodeGroup.position().x - delta.x,
+                    y: state.nodeGroup.position().y - delta.y
+                });
+
+                if (StateManager.startNode === state) {
+                    this.updateStartNodePosition();
+                }
+            });
+            StateManager.updateTransitions();
+        };
+
+        let moveStatesString = "Move ";
+        if (this.selectedObjects.length > 1) {
+            moveStatesString += `${this.selectedObjects.length} Nodes`;
+        }
+        else if (this.selectedObjects.length == 1) {
+            let singleState = this.selectedObjects[0] as NodeWrapper;
+            moveStatesString += `"${singleState.labelText}"`;
+        }
+
+        let moveNodesAction = new Action(
+            "moveStates",
+            moveStatesString,
+            moveStatesForward,
+            moveStatesBackward,
+            {delta: delta, states: [...this.selectedObjects]}
+        );
+
+        UndoRedoManager.pushAction(moveNodesAction, false);
+    }
+
+    public static updateTransitions() {
+        StateManager._transitionWrappers.forEach(trans => {
+            trans.updatePoints();
+        });
+        StateManager._transitionLayer.draw();
+    }
 }
 
 interface SerializedAutomaton {
@@ -740,4 +1187,66 @@ interface SerializedTransition {
     dest: string,
     isEpsilonTransition: boolean,
     tokens: Array<string>
+}
+
+class CreateNodeActionData extends ActionData {
+    public x: number;
+    public y: number;
+    public node: NodeWrapper;
+}
+
+class RemoveNodeActionData extends ActionData {
+    public node: NodeWrapper;
+    public transitions: Set<TransitionWrapper>;
+    public isStart: boolean;
+}
+
+class MoveStatesActionData extends ActionData {
+    public delta: Vector2d;
+    public states: Array<NodeWrapper>;
+}
+
+class SetNodeNameActionData extends ActionData {
+    public oldName: string;
+    public newName: string;
+    public node: NodeWrapper;
+}
+
+class SetNodeIsAcceptActionData extends ActionData {
+    public oldValue: boolean;
+    public newValue: boolean;
+    public node: NodeWrapper;
+}
+
+class SetNodeIsStartActionData extends ActionData {
+    public oldStart: NodeWrapper;
+    public newStart: NodeWrapper;
+}
+
+class AddTransitionActionData extends ActionData {
+    public transition: TransitionWrapper;
+}
+
+class RemoveTransitionActionData extends ActionData {
+    public transition: TransitionWrapper;
+}
+
+class SetTransitionAcceptsTokenData extends ActionData {
+    public transition: TransitionWrapper;
+    public token: TokenWrapper;
+}
+
+class AddTokenActionData extends ActionData {
+    public token: TokenWrapper;
+}
+
+class RemoveTokenActionData extends ActionData {
+    public token: TokenWrapper;
+    public transitionsUsingToken: TransitionWrapper[];
+}
+
+class SetTokenSymbolActionData extends ActionData {
+    public oldSymbol: string;
+    public newSymbol: string;
+    public token: TokenWrapper;
 }
