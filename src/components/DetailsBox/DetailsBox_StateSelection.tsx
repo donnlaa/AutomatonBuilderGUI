@@ -3,6 +3,7 @@ import NodeWrapper from "../../NodeWrapper";
 import SelectableObject from "../../SelectableObject";
 import StateManager from "../../StateManager";
 import { useActionStack } from "../../utilities/ActionStackUtilities";
+import { CoreListItem, CoreListItem_Left, ListItem } from "../ListItem";
 
 interface DetailsBox_StateSelectionProps {
     nodeWrapper: NodeWrapper
@@ -10,40 +11,11 @@ interface DetailsBox_StateSelectionProps {
     setStartNode: React.Dispatch<React.SetStateAction<NodeWrapper>>
 }
 
-interface SetStartStateButtonProps {
-    node: NodeWrapper;
-}
-
-function SetStartStateButton(props: SetStartStateButtonProps) {
-    const [isStartNodeInternal, setIsStartNodeInternal] = useState(StateManager.startNode === props.node);
-
-    const [_, currentStackLocation] = useActionStack();
-    useEffect(() => {
-        setIsStartNodeInternal(StateManager.startNode === props.node);
-    }, [currentStackLocation]);
-
-    let classes = 'rounded-full p-2 m-1 mx-2 block ';
-    if (isStartNodeInternal) {
-        return (<button
-            className={classes + 'bg-slate-400 text-gray-700'}
-            disabled={true}>
-            Current Start State
-        </button>)
-    }
-    else {
-        return <button
-            className={classes + 'bg-emerald-500 text-white'}
-            onClick={_ => StateManager.setNodeIsStart(props.node)}>
-            Set Start State
-        </button>
-    }
-
-}
-
 export default function DetailsBox_StateSelection(props: DetailsBox_StateSelectionProps) {
     const nw = props.nodeWrapper;
     const [nodeLabelText, setLabelText] = useState(nw.labelText);
     const [isAcceptNode, setIsAcceptNode] = useState(nw.isAcceptNode);
+    const [isStartNodeInternal, setIsStartNodeInternal] = useState(StateManager.startNode === nw);
 
     let updateNodeName = (newName: string) => {
         setLabelText(newName);
@@ -59,20 +31,38 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
     useEffect(() => {
         setLabelText(nw.labelText);
         setIsAcceptNode(nw.isAcceptNode);
+        setIsStartNodeInternal(StateManager.startNode === nw);
     }, [currentStackLocation]);
 
+    let nodeNameInput = (
+        <input
+            className="float-right align-bottom bg-transparent text-right"
+            type="text"
+            placeholder="State name"
+            value={nodeLabelText}
+            onChange={e => updateNodeName(e.target.value)}></input>
+    );
+
+    let nodeAcceptInput = (
+        <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => updateNodeIsAccept(e.target.checked)}></input>
+    );
+
+    let startStateClasses = `${isStartNodeInternal ? 'text-gray-700 dark:text-gray-300' : 'text-blue-500 dark:text-blue-400 '} flex flex-row items-center`
     return (
         <div className="flex flex-col">
-            <div className="font-medium text-2xl">State</div>
-            <div className="flex flex-row">
-                <div className="flex-1 mr-4">Name</div>
-                <input className="flex-1 bg-transparent" type="text" placeholder="State name" value={nodeLabelText} onChange={e => updateNodeName(e.target.value)}></input>
-
+            <div className="font-medium text-2xl mb-2">State</div>
+            <div className="divide-y mb-3">
+                <ListItem title="Name" rightContent={nodeNameInput} />
+                <ListItem title="Accepts" rightContent={nodeAcceptInput} />
             </div>
-            <SetStartStateButton node={nw} />
-            <div>
-                <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => updateNodeIsAccept(e.target.checked)}></input>
-                <label htmlFor="is-accept-state">Accept State</label>
+            <div className="divide-y mb-3">
+                <CoreListItem>
+                    <CoreListItem_Left>
+                        <button className={startStateClasses} onClick={_ => StateManager.setNodeIsStart(nw)} disabled={isStartNodeInternal}>
+                            {isStartNodeInternal ? 'Current Start State' : 'Set As Start State'}
+                        </button>
+                    </CoreListItem_Left>
+                </CoreListItem>
             </div>
         </div>
     );

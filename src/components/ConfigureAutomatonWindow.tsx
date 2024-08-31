@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TokenWrapper from "../TokenWrapper";
 import StateManager from "../StateManager";
-import { CoreListItem, CoreListItem_Left, ListItem } from "./ListItem";
+import { CoreListItem, CoreListItem_Left, CoreListItem_Right, ListItem } from "./ListItem";
 import { BsPlusCircleFill, BsXCircleFill } from "react-icons/bs";
 import { useActionStack } from "../utilities/ActionStackUtilities";
 
@@ -25,15 +25,14 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
 
     return (
         <CoreListItem>
-            <div className="flex flex-row">
-                <div className="flex-1 grow float-left">
-                    <input className="focus:outline-none bg-transparent" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => updateTokenSymbol(e.target.value)}></input>
-                </div>
+            <CoreListItem_Left>
+                <input className="focus:outline-none bg-transparent grow" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => updateTokenSymbol(e.target.value)}></input>
+            </CoreListItem_Left>
+            <CoreListItem_Right>
                 <button className="flex-0 float-right px-2 block text-center text-red-500 align-middle" onClick={() => StateManager.removeToken(tw)}>
                     <BsXCircleFill />
                 </button>
-            </div>
-
+            </CoreListItem_Right>
         </CoreListItem>
     )
 }

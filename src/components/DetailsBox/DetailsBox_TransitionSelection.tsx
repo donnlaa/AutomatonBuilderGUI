@@ -5,6 +5,7 @@ import StateManager from "../../StateManager";
 import TransitionWrapper from "../../TransitionWrapper";
 import TokenWrapper from "../../TokenWrapper";
 import { useActionStack } from "../../utilities/ActionStackUtilities";
+import { ListItem } from "../ListItem";
 
 interface DetailsBox_TransitionSelectionProps {
     transition: TransitionWrapper;
@@ -36,12 +37,13 @@ function DetailsBox_TransitionTokenCheckBox(props: DetailsBox_TransitionTokenChe
         setTokenIsIncluded(transition.hasToken(token));
     }, [currentStackLocation]);
 
+    let transitionUseTokenInput = (
+        <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={tokenIsIncluded} onChange={e => updateTokenIsIncluded(e.target.checked)}></input>
+    );
+
     return (
-        <div key={token.id}>
-            <input type="checkbox" id="is-epsilon-transition" name={`transition-accepts-${token.id}`} checked={tokenIsIncluded} onChange={e => updateTokenIsIncluded(e.target.checked)}></input>
-            <label htmlFor={`transition-accepts-${token.id}`}>{token.symbol}</label>
-        </div>
-    )
+        <ListItem key={token.id} title={token.symbol} rightContent={transitionUseTokenInput} />
+    );
 }
 
 export default function DetailsBox_TransitionSelection(props: DetailsBox_TransitionSelectionProps) {
@@ -67,18 +69,22 @@ export default function DetailsBox_TransitionSelection(props: DetailsBox_Transit
         setEpsilonTransition(tw.isEpsilonTransition);
     }, [currentStackLocation]);
 
+    let transitionUseEpsilonInput = (
+        <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={isEpsilonTransition} onChange={e => updateIsEpsilonTransition(e.target.checked)}></input>
+    );
+
     return (
         <div className="flex flex-col">
             <div className="font-medium text-2xl">Transition</div>
             <div>{srcNode.labelText} to {dstNode.labelText}</div>
-            <div>
-                Transition on:
+            <div className="mt-3 ml-1 mb-1 text-left">
+                Accepted Tokens
             </div>
-            <div>
-                <input type="checkbox" id="is-epsilon-transition" name="is-epsilon-transition" checked={isEpsilonTransition} onChange={e => updateIsEpsilonTransition(e.target.checked)}></input>
-                <label htmlFor="is-epsilon-transition">ε</label>
+            <div className="divide-y mb-3">
+                <ListItem title="ε" rightContent={transitionUseEpsilonInput} />
+                {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transition={tw} token={token} />)}
             </div>
-            {StateManager.alphabet.map((token) => <DetailsBox_TransitionTokenCheckBox transition={tw} token={token} />)}
+            
         </div>
     );
 }

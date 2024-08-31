@@ -16,7 +16,7 @@ export function CoreListItem(props: React.PropsWithChildren) {
 
 export function CoreListItem_Left(props: React.PropsWithChildren) {
     return (
-        <div className="float-left align-middle">
+        <div className="float-left align-middle ml-1">
             {props.children}
         </div>
     );
@@ -24,7 +24,7 @@ export function CoreListItem_Left(props: React.PropsWithChildren) {
 
 export function CoreListItem_Right(props: React.PropsWithChildren) {
     return (
-        <div className="float-right align-middle">
+        <div className="float-right align-middle mr-1">
             {props.children}
         </div>
     );
