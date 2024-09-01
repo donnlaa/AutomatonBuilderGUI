@@ -1,4 +1,5 @@
 import NodeWrapper from "./NodeWrapper";
+import { v4 as uuidv4 } from "uuid";
 
 export default class UndoRedoManager {
     // The stack we push actions onto and pop off.
@@ -87,6 +88,7 @@ export class Action {
     private _forward: (data: ActionData) => void;
     private _backward: (data: ActionData) => void;
     private _data: ActionData;
+    private _id: string;
 
     constructor(name: string, displayString: string, forward: (data: ActionData) => void, backward: (data: ActionData) => void, data: ActionData) {
         this.name = name;
@@ -94,6 +96,11 @@ export class Action {
         this._forward = forward;
         this._backward = backward;
         this._data = data;
+        this._id = uuidv4();
+    }
+
+    public get id(): string {
+        return this._id;
     }
 
     public forward() {
