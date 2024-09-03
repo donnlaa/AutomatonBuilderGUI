@@ -15,6 +15,7 @@ import InformationBox, { InformationBoxType } from './components/InformationBox'
 import { testStringOnAutomata } from './components/TestStringOnAutomata';
 import {  } from './components/TestStringWindow';
 import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
     const [currentTool, setCurrentTool] = useState(Tool.States);
@@ -184,7 +185,17 @@ function App() {
                     <Toolbox currentTool={currentTool} setCurrentTool={setCurrentTool} />
                 </FloatingPanel>
             </div>
-            {configWindowOpen && <ClosableModalWindow title='Configure Automaton' close={closeConfigWindow}><ConfigureAutomatonWindow /></ClosableModalWindow>}
+            {
+                <AnimatePresence>
+                    {configWindowOpen && (
+                        <motion.div>
+                            <ClosableModalWindow title='Configure Automaton' close={closeConfigWindow}>
+                                <ConfigureAutomatonWindow />
+                            </ClosableModalWindow>
+                        </motion.div>
+                        )}
+                </AnimatePresence>
+            }
         </div>
     );
 }
