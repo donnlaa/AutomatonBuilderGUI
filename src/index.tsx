@@ -13,7 +13,7 @@ import { BsGearFill, BsMoonFill, BsCheck2Circle } from 'react-icons/bs';
 import TestStringWindow from './components/TestStringWindow';
 import InformationBox, { InformationBoxType } from './components/InformationBox';
 import { testStringOnAutomata } from './components/TestStringOnAutomata';
-import {  } from './components/TestStringWindow';
+import { } from './components/TestStringWindow';
 import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,14 +26,14 @@ function App() {
     //Solution from this stackoverflow page: https://stackoverflow.com/questions/9626059/window-onbeforeunload-in-chrome-what-is-the-most-recent-fix
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-          e.preventDefault();
-          //using on chrome may require return value to be set
+            e.preventDefault();
+            //using on chrome may require return value to be set
         };
-    
+
         window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-      }, []);
+    }, []);
 
 
     // Switch current tool when keys pressed
@@ -76,12 +76,12 @@ function App() {
     }, [startNode]);
 
     const emptyStringToken = StateManager.alphabet.some(token => token.symbol.trim() === '');
-    const isAutomatonValid = 
+    const isAutomatonValid =
 
-    useEffect(() => {
-        const unique = StateManager.areAllLabelsUnique();
-        setIsLabelUnique(unique);
-    }, [selectedObjects]);
+        useEffect(() => {
+            const unique = StateManager.areAllLabelsUnique();
+            setIsLabelUnique(unique);
+        }, [selectedObjects]);
 
     const [configWindowOpen, setConfigWindowOpen] = useState(false);
     const openConfigWindow = () => { setConfigWindowOpen(true); };
@@ -97,9 +97,15 @@ function App() {
     let dfa = StateManager.dfa;
     let dfaErrors = dfa.getErrors();
     let errorBoxes = dfaErrors.map(err => {
-        return (<InformationBox infoBoxType={InformationBoxType.Error}>
-            {err.errorString()}
-        </InformationBox>)
+        return (
+            <div key={err.errorString()}>
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        {err.errorString()}
+                    </InformationBox>
+                </motion.div>
+            </div>
+        );
     });
 
     return (
@@ -114,7 +120,10 @@ function App() {
                             setStartNode={setStartNode}
                         />
 
-                        {errorBoxes}
+                        <AnimatePresence>
+                            {errorBoxes}
+                        </AnimatePresence>
+                        
 
                         {/* Example error message boxes commented out */}
                         {/*
@@ -152,7 +161,7 @@ function App() {
                                 Invalid token: Empty string detected.
                             </InformationBox>
                         )}
-                        
+
                         <div className="flex flex-col items-center mt-4">
                             <button
                                 className="rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center"
@@ -193,7 +202,7 @@ function App() {
                                 <ConfigureAutomatonWindow />
                             </ClosableModalWindow>
                         </motion.div>
-                        )}
+                    )}
                 </AnimatePresence>
             }
         </div>
