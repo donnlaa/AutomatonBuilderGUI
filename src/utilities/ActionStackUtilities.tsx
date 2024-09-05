@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
-import StateManager from "../StateManager";
 import UndoRedoManager, { Action } from "../UndoRedoManager";
 
+/**
+ * Returns the current stack and the current stack location. In most cases,
+ * you'll only need the stack location.
+ */
 export function useActionStack(): [Array<Action>, number] {
     const [currentStack, setCurrentStack] = useState([]);
     const [currentStackLocation, setCurrentStackLocation] = useState(-1);

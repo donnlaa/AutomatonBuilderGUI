@@ -1,16 +1,22 @@
 import { Tool } from '../Tool';
 import ToolButton from './ToolButton';
 import StateManager from '../StateManager';
-import * as React from 'react';
-const { useRef } = React;
-import { BsArrowRight, BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut } from 'react-icons/bs';
+import { useRef } from 'react';
+import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
 import { BiReset } from "react-icons/bi";
+
 interface ToolboxProps {
     currentTool: Tool
     setCurrentTool: React.Dispatch<React.SetStateAction<Tool>>
 }
 
+/**
+ * Provides the UI interface with which the user can select a tool to use.
+ * @param props
+ * @param {Tool} props.currentTool The current tool being used.
+ * @param {React.Dispatch<React.SetStateAction<Tool>>} props.setCurrentTool A function for setting the current tool.
+ */
 export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
     const fileInputRef = useRef<HTMLInputElement>(null); // Create a ref for the file input
 
@@ -18,8 +24,6 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
     const handleLoadButtonClick = () => {
         fileInputRef.current?.click(); // Programmatically click the hidden file input
     };
-
-    // react-icons faSearchPlus and faSearchMinus for zoom in and out buttons
 
     return (
         <div className='flex flex-col text-xl'>

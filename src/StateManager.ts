@@ -4,8 +4,8 @@ import Konva from "konva";
 import TransitionWrapper from "./TransitionWrapper";
 import SelectableObject from "./SelectableObject";
 import TokenWrapper from "./TokenWrapper";
-import { ChangeEvent, ChangeEventHandler } from "react";
-import { LightColorScheme, DarkColorScheme, ColorScheme } from "./ColorSchemes";
+import { ChangeEvent } from "react";
+import { LightColorScheme, DarkColorScheme } from "./ColorSchemes";
 import DFA from "automaton-kit/lib/dfa/DFA";
 import DFATransition from "automaton-kit/lib/dfa/DFATransition";
 import DFAState from "automaton-kit/lib/dfa/DFAState";
@@ -13,34 +13,80 @@ import { convertIDtoLabelOrSymbol } from "./utilities/AutomatonUtilities";
 import UndoRedoManager, { Action, ActionData } from "./UndoRedoManager";
 import { Vector2d } from "konva/lib/types";
 
+/**
+ * The "engine" behind the Automaton Builder GUI. It handles a lot of the
+ * program's functionality, and (as the name implies) holds the overall state
+ * of the automaton itself.
+ */
 export default class StateManager {
+    /**
+     * The index of the next state to be created. States are named as q0, q1,
+     * q2, etc by default, and this value keeps track of which number we're on.
+     */
     static _nextStateId = 0;
+
+    /** Returns the current start node for the automaton. */
     public static get startNode(): NodeWrapper | null { return StateManager._startNode; }
     private static _startNode: NodeWrapper | null = null;
 
+    /** Holds all of the node wrappers in the automaton. */
     private static _nodeWrappers: Array<NodeWrapper> = [];
+
+    /** Holds all of the transition wrappers in the automaton. */
     private static _transitionWrappers: Array<TransitionWrapper> = [];
+
+    /** Holds all of the tokens in the automaton. */
     private static _alphabet: Array<TokenWrapper> = [];
 
+    /** Holds all of the currently selected objects (nodes and transitions). */
     private static _selectedObjects: Array<SelectableObject> = [];
 
+    /**
+     * When the user is in the process of creating a transition, holds the
+     * node that will be the transition's source.
+     */
     private static _tentativeTransitionSource: NodeWrapper | null = null;
+
+    /**
+     * When the user is in the process of creating a transition, holds the
+     * node that will be the transition's destination.
+     */
     private static _tentativeTransitionTarget: NodeWrapper | null = null;
 
+    /** Keeps track of the current tool being used by the user. */
     private static _currentTool: Tool = Tool.States;
 
+    /** The stage, or canvas, where the state machine is drawn. */
     private static _stage: Konva.Stage | null = null;
+
+    /** The arrow used to represent a transition being created by the user. */
     private static _tentConnectionLine: Konva.Arrow | null = null;
+
+    /** The arrow used to represent the start node. */
     private static _startStateLine: Konva.Arrow | null = null;
+
+    /** The layer of the Konva stage where nodes are drawn. */
     private static _nodeLayer: Konva.Layer | null = null;
+
+    /** The layer of the Konva stage where transitions are drawn. */
     private static _transitionLayer: Konva.Layer | null = null;
+
+    /** The layer of the Konva stage where the grid is drawn. */
     private static _gridLayer: Konva.Layer | null = null;
 
+    /** A function to call when the selected objects are changed. */
     public static setSelectedObjects: React.Dispatch<React.SetStateAction<SelectableObject[]>> | null = null;
 
+    /**
+     * Whether or not the app is in dark mode. This should not be modified or
+     * read from directly; instead, use `StateManager.useDarkMode`.
+     */
     private static _useDarkMode: boolean = false;
+
+    /** Whether or not to snap nodes to the grid. */
     private static _snapToGridEnabled: boolean = false;
 
+    /** Returns UI configuration information for the current color scheme. */
     public static get colorScheme() {
         if (this._useDarkMode) {
             return DarkColorScheme;
@@ -53,14 +99,17 @@ export default class StateManager {
     private constructor() {
     }
 
+    /** Toggles whether or not nodes snap to the grid. */
     public static toggleSnapToGrid() {
         StateManager._snapToGridEnabled = !StateManager._snapToGridEnabled;
     }
 
+    /** Returns whether or not nodes snap to the grid. */
     public static isSnapToGridEnabled(): boolean {
         return StateManager._snapToGridEnabled;
     }
 
+    /** Sets up the state manager and an empty automaton. */
     public static initialize() {
         this._startNode = null;
         this._nodeWrappers = [];
@@ -123,11 +172,16 @@ export default class StateManager {
         addEventListener('keydown', this.onKeyDown);
         addEventListener('resize', this.handleResize);
     }
+
+    /** Gets the array of transitions for the automaton. */
     public static get transitions(): Array<TransitionWrapper> {
         return StateManager._transitionWrappers;
     }
 
-    //handles resizing the canvas when the window is resized using an event listener
+    /**
+     * Handles resizing the canvas when the window is resized using an event
+     * listener.
+     */
     private static handleResize() {
         if (StateManager._stage) {
             StateManager._stage.width(window.innerWidth);
@@ -143,12 +197,18 @@ export default class StateManager {
         }
     }
 
-    // getter for the stage position
+    /**
+     * Gets the current position of the stage (panning the view is, technically,
+     * dragging the entire stage around).
+     */
     public static getStagePosition(): { x: number; y: number } {
         return this._stage ? { x: this._stage.x(), y: this._stage.y() } : { x: 0, y: 0 };
     }
 
-    // getter for the scale of the stage so it can be used in other classes
+    /**
+     * Gets the current scale of the stage (zooming the view is, technically,
+     * scaling the entire stage).
+     */
     public static getStageScale(): { scaleX: number; scaleY: number } {
         if (this._stage) {
             return { scaleX: this._stage.scaleX(), scaleY: this._stage.scaleY() };
@@ -157,6 +217,7 @@ export default class StateManager {
         return { scaleX: 1, scaleY: 1 };
     }
 
+    /** Draws the grid. */
     public static drawGrid() {
         if (!StateManager._gridLayer || !StateManager._stage) {
             console.error('Grid layer or stage is not initialized.');
@@ -206,21 +267,22 @@ export default class StateManager {
         StateManager._gridLayer.batchDraw();
     }
 
+    /** Gets the current tool. */
     public static get currentTool() {
         return StateManager._currentTool;
     }
 
+    /** Sets the current tool. */
     public static set currentTool(tool: Tool) {
         StateManager._currentTool = tool;
     }
 
+    /** Called when the user pans the view. */
     private static onDragMove(evt: Konva.KonvaEventObject<MouseEvent>) {
-        console.log('Stage is being dragged. Redrawing grid.'); // This line logs to the console
         StateManager.drawGrid();
     }
 
-
-
+    /** Called when the user clicks on the background. */
     private static onClick(evt: Konva.KonvaEventObject<MouseEvent>) {
         let thingUnderMouse = StateManager._stage.getIntersection(StateManager._stage.getPointerPosition());
         if (!thingUnderMouse) {
@@ -228,16 +290,20 @@ export default class StateManager {
         }
     }
 
+    /**
+     * Called when the user double-clicks on the view. When the user is using
+     * the State tool, this adds a new node at the cursor's position.
+     */
     private static onDoubleClick(evt: Konva.KonvaEventObject<MouseEvent>) {
         if (StateManager.currentTool == Tool.States) {
             StateManager.addStateAtDoubleClickPos(evt);
 
         }
-        else if (StateManager.currentTool == Tool.Transitions) {
-            console.log('in transition tool mode, so don\'t do anything');
-        }
     }
 
+    /**
+     * Pushes an action to the action stack that adds a node to the automaton.
+     */
     private static addStateAtDoubleClickPos(evt: Konva.KonvaEventObject<MouseEvent>) {
         if (!StateManager._stage) return;
 
@@ -287,11 +353,16 @@ export default class StateManager {
             `Add "${newStateWrapperName}"`,
             addNodeForward,
             addNodeBackward,
-            {'x': x, 'y': y, "node": null}
+            { 'x': x, 'y': y, "node": null }
         );
         UndoRedoManager.pushAction(addNodeAction);
     }
 
+    /**
+     * Pushes an action to the action stack that removes the given node from
+     * the automaton.
+     * @param node The node to remove.
+     */
     public static removeNode(node: NodeWrapper) {
         // Find all transitions involving this node, save those
         let transitionsInvolvingThisNode = new Set(this._transitionWrappers.filter(i => i.involvesNode(node)));
@@ -358,6 +429,11 @@ export default class StateManager {
 
     }
 
+    /**
+     * Pushes an action to the action stack that renames the given node.
+     * @param node The node to rename.
+     * @param newName The new name to give to the node.
+     */
     public static setNodeName(node: NodeWrapper, newName: string) {
         let oldName = node.labelText;
 
@@ -374,11 +450,17 @@ export default class StateManager {
             `Rename "${oldName}" To "${newName}"`,
             setNodeNameForward,
             setNodeNameBackward,
-            {'oldName': oldName, 'newName': newName, 'node': node}
+            { 'oldName': oldName, 'newName': newName, 'node': node }
         );
         UndoRedoManager.pushAction(setNodeNameAction);
     }
 
+    /**
+     * Pushes an action to the action stack that sets the accept status of the
+     * given node.
+     * @param node The node to set the accept status of.
+     * @param isAccept Whether or not the given node should be an accepting node.
+     */
     public static setNodeIsAccept(node: NodeWrapper, isAccept: boolean) {
         let oldValue = node.isAcceptNode
 
@@ -395,11 +477,16 @@ export default class StateManager {
             `Mark "${node.labelText}" as ${isAccept ? 'Accepting' : 'Rejecting'}`,
             setNodeIsAcceptForward,
             setNodeIsAcceptBackward,
-            {'oldValue': oldValue, 'newValue': isAccept, 'node': node}
+            { 'oldValue': oldValue, 'newValue': isAccept, 'node': node }
         );
         UndoRedoManager.pushAction(setNodeIsAcceptAction);
     }
 
+    /**
+     * Pushes an action to the action stack that sets the given node to be the
+     * automaton's start node.
+     * @param node The node to set as the start node.
+     */
     public static setNodeIsStart(node: NodeWrapper) {
         let oldStart = StateManager._startNode;
 
@@ -416,11 +503,17 @@ export default class StateManager {
             `Set "${node?.labelText ?? 'none'}" As Initial Node`,
             setNodeIsStartForward,
             setNodeIsStartBackward,
-            {'oldStart': oldStart, 'newStart': node}
+            { 'oldStart': oldStart, 'newStart': node }
         );
         UndoRedoManager.pushAction(setNodeIsStartAction);
     }
 
+    /** Sets the automaton's start node.
+     * 
+     * **NOTE:** This function is *not* undo/redo safe! In most cases, if you
+     * want to set the accept status of a node, you should use the
+     * `StateManager.setNodeIsStart` method instead.
+     */
     public static set startNode(node: NodeWrapper | null) {
         if (StateManager._startNode) {
             StateManager._startNode.nodeGroup.off('move.startstate');
@@ -439,10 +532,17 @@ export default class StateManager {
 
     }
 
+    /**
+     * Updates the position of the start node arrow to align with the
+     * automaton's start node.
+     */
     public static updateStartNodePosition() {
         StateManager._startStateLine.absolutePosition(StateManager._startNode.nodeGroup.absolutePosition());
     }
 
+    /**
+     * Handles keyboard input, for actions like undo/redo and deleting objects.
+     */
     private static onKeyDown(ev: KeyboardEvent) {
         //based on the ignore shortcuts implementation in index.tsx
         const n = document.activeElement.nodeName;
@@ -468,12 +568,27 @@ export default class StateManager {
         }
     }
 
+    /**
+     * Starts the creation of a new transition from a given source node.
+     * @param sourceNode The node being dragged from, which will become the
+     * source node in this transition if it is completed.
+     */
     public static startTentativeTransition(sourceNode: NodeWrapper) {
         StateManager._tentativeTransitionSource = sourceNode;
         StateManager._tentConnectionLine.visible(true);
         StateManager._tentConnectionLine.setAbsolutePosition(sourceNode.nodeGroup.absolutePosition());
     }
 
+    /**
+     * Changes the position of the tentative transition arrow head. If the
+     * cursor is not currently over a node, the head will follow the cursor
+     * directly. If the cursor is currently over a node, the head will point
+     * to the node as if it was connected.
+     * @param x The X coordinate of the cursor, where the tentative transition
+     * head should point.
+     * @param y The Y coordinate of the cursor, where the tentative transition
+     * head should point.
+     */
     public static updateTentativeTransitionHead(x: number, y: number) {
         if (!StateManager._stage || !StateManager._tentativeTransitionSource || !StateManager._tentConnectionLine) return;
 
@@ -509,7 +624,16 @@ export default class StateManager {
     }
 
 
-
+    /**
+     * Called when the user ends a tentative transition by releasing the mouse
+     * button.
+     * - If they were not hovering over a node, then the tentative
+     * transition is simply discarded.
+     * - If they were hovering over a node, and no transition previously existed
+     * between the two nodes, then such a new transition is created.
+     * - If they were hovering over a node that was already connected to the
+     * source node, then the existing transition is selected.
+     */
     public static endTentativeTransition() {
         if (StateManager._tentativeTransitionSource !== null && StateManager.tentativeTransitionTarget !== null) {
             const existingTransition = StateManager.transitions.find(t =>
@@ -531,6 +655,12 @@ export default class StateManager {
         StateManager._tentConnectionLine.visible(false);
     }
 
+    /**
+     * Pushes an action to the action stack that adds a new transition with
+     * the given source and destination nodes.
+     * @param source The source node for this transition.
+     * @param dest The destination node for this transition.
+     */
     public static addTransition(source: NodeWrapper, dest: NodeWrapper) {
         const newTransition = new TransitionWrapper(source, dest);
 
@@ -556,6 +686,11 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTransitionAction);
     }
 
+    /**
+     * Pushes an action to the action stack that removes the given transition
+     * from the automaton.
+     * @param transition The transition to remove.
+     */
     public static removeTransition(transition: TransitionWrapper) {
         let removeTransitionForward = (data: RemoveTransitionActionData) => {
             StateManager._transitionWrappers = StateManager._transitionWrappers.filter(otherTransition => otherTransition !== data.transition);
@@ -575,13 +710,17 @@ export default class StateManager {
         let removeTransitionAction = new Action(
             "removeTransition",
             `Remove Transition "${transition.sourceNode.labelText}" to "${transition.destNode.labelText}"`,
-                removeTransitionForward,
-                removeTransitionBackward,
-                { 'transition': transition }
+            removeTransitionForward,
+            removeTransitionBackward,
+            { 'transition': transition }
         );
         UndoRedoManager.pushAction(removeTransitionAction);
     }
 
+    /**
+     * Pushes an action to the action stack that adds a new token with an
+     * empty symbol to the automaton.
+     */
     public static addToken() {
         // TODO: logic for removing tokens needs to be modified - right now
         // it looks like it does some checks that we may no longer want, now
@@ -604,6 +743,11 @@ export default class StateManager {
         UndoRedoManager.pushAction(addTokenAction);
     }
 
+    /**
+     * Pushes an action to the action stack that removes the given token from
+     * the automaton.
+     * @param token The token to remove.
+     */
     public static removeToken(token: TokenWrapper) {
         let transitionsUsingToken = StateManager._transitionWrappers.filter(trans => trans.hasToken(token));
 
@@ -627,6 +771,12 @@ export default class StateManager {
         UndoRedoManager.pushAction(removeTokenAction);
     }
 
+    /**
+     * Pushes an action to the action stack that sets the given token's symbol
+     * to the provided symbol.
+     * @param token The token to set the symbol/label of.
+     * @param newSymbol The new symbol/label for the token.
+     */
     public static setTokenSymbol(token: TokenWrapper, newSymbol: string) {
         let oldSymbol = token.symbol;
 
@@ -643,11 +793,17 @@ export default class StateManager {
             `Rename Token "${oldSymbol}" To "${newSymbol}"`,
             setTokenSymbolForward,
             setTokenSymbolBackward,
-            {'oldSymbol': oldSymbol, 'newSymbol': newSymbol, 'token': token}
+            { 'oldSymbol': oldSymbol, 'newSymbol': newSymbol, 'token': token }
         );
         UndoRedoManager.pushAction(setTokenSymbolAction);
     }
 
+    /**
+     * Pushes an action to the action stack that adds the given token as an
+     * accepted token by the given transition.
+     * @param transition The transition to add the token to.
+     * @param token The token to add to the transition.
+     */
     public static setTransitionAcceptsToken(transition: TransitionWrapper, token: TokenWrapper) {
         let hadTokenBefore = transition.hasToken(token);
         let setTransitionAcceptsTokenForward = (data: SetTransitionAcceptsTokenData) => {
@@ -673,6 +829,12 @@ export default class StateManager {
         UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
     }
 
+    /**
+     * Pushes an action to the action stack that removes the given token as an
+     * accepted token by the given transition.
+     * @param transition The transition to remove the token from.
+     * @param token The token to remove from the transition.
+     */
     public static setTransitionDoesntAcceptToken(transition: TransitionWrapper, token: TokenWrapper) {
         let hadTokenBefore = transition.hasToken(token);
         let setTransitionDoesntAcceptTokenForward = (data: SetTransitionAcceptsTokenData) => {
@@ -698,6 +860,11 @@ export default class StateManager {
         UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
     }
 
+    /**
+     * Pushes an action to the action stack that makes the given transition
+     * accept the empty string.
+     * @param transition The transition to make accept the empty string.
+     */
     public static setTransitionAcceptsEpsilon(transition: TransitionWrapper) {
         let hadEpsilonBefore = transition.isEpsilonTransition;
 
@@ -718,6 +885,11 @@ export default class StateManager {
         UndoRedoManager.pushAction(setTransitionAcceptsTokenAction);
     }
 
+    /**
+     * Pushes an action to the action stack that makes the given transition
+     * not accept the empty string.
+     * @param transition The transition to make not accept the empty string.
+     */
     public static setTransitionDoesntAcceptEpsilon(transition: TransitionWrapper) {
         let hadEpsilonBefore = transition.isEpsilonTransition;
 
@@ -738,26 +910,49 @@ export default class StateManager {
         UndoRedoManager.pushAction(setTransitionDoesntAcceptTokenAction);
     }
 
+    /**
+     * Gets whether or not the user is currently attempting to create a
+     * transition (i.e., have they clicked and dragged on a node while using
+     * the Transition tool?)
+     */
     public static get tentativeTransitionInProgress() {
         return StateManager._tentativeTransitionSource !== null;
     }
 
+    /**
+     * Gets the current target node for a tentative transition, assuming that
+     * the user is currently attempting to create one (i.e., they have the
+     * Transition tool selected, have clicked and dragged off of one node and
+     * are currently hovering over another.)
+     */
     public static get tentativeTransitionTarget() {
         return StateManager._tentativeTransitionTarget;
     }
 
+    /**
+     * Sets the current tentative transition's target node. If the user released
+     * the mouse after setting this, a transition would be created from the
+     * source node to this node.
+     */
     public static set tentativeTransitionTarget(newTarget: NodeWrapper | null) {
         StateManager._tentativeTransitionTarget = newTarget;
     }
 
+    /** Sets the array of selected objects. */
     public static set selectedObjects(newArray: Array<SelectableObject>) {
         StateManager._selectedObjects = newArray;
     }
 
+    /** Gets a copy of the array of selected objects. */
     public static get selectedObjects() {
         return [...StateManager._selectedObjects];
     }
 
+    /**
+     * Adds a given object to the current selection.
+     * @param obj The object to select.
+     * @returns 
+     */
     public static selectObject(obj: SelectableObject) {
         if (StateManager._selectedObjects.includes(obj)) {
             return;
@@ -768,12 +963,17 @@ export default class StateManager {
         obj.select();
     }
 
+    /** Removes all objects from the current selection. */
     public static deselectAllObjects() {
         StateManager._selectedObjects.forEach((obj) => obj.deselect());
         StateManager.setSelectedObjects([]);
         StateManager._selectedObjects = [];
     }
 
+    /**
+     * Removes all currently-selected objects from the automaton, in an
+     * undo/redo safe manner.
+     */
     public static deleteAllSelectedObjects() {
         let selectedNodes = new Set<NodeWrapper>(StateManager._selectedObjects.filter(i => i instanceof NodeWrapper).map(i => i as NodeWrapper));
         let selectedTransitions = new Set<TransitionWrapper>(StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper).map(i => i as TransitionWrapper));
@@ -786,13 +986,13 @@ export default class StateManager {
                 extraTransitions.add(transition);
             }
         });
-        
+
         // Remove the transitions that were already going to be deleted,
         // so we don't delete them twice
         extraTransitions.forEach((transition) => {
             selectedTransitions.delete(transition);
         });
-        
+
         // Remove all states
         selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
 
@@ -804,6 +1004,15 @@ export default class StateManager {
         StateManager._selectedObjects = [];
     }
 
+    /**
+     * Immediately deletes the given node from the automaton, and any
+     * transitions associated with it.
+     * 
+     * **NOTE:** This method is *not* undo/redo safe. In most cases, you should
+     * instead use `StateManager.removeNode`. We may want to rename this
+     * function or remove it entirely to avoid confusion.
+     * @param node The node to remove.
+     */
     public static deleteNode(node: NodeWrapper) {
         const transitionsDependentOnDeletedNode: Array<TransitionWrapper> = [];
         StateManager._transitionWrappers.forEach((trans) => {
@@ -826,7 +1035,11 @@ export default class StateManager {
         }
     }
 
-    // method to zoom in or out when the mouse wheel is scrolled.
+    /**
+     * Called when the user uses the mouse scroll wheel.
+     * This causes the state diagram view to be zoomed in or out.
+     * @param ev
+     */
     private static handleWheelEvent(ev: any) {
         ev.evt.preventDefault();
         var oldScale = StateManager._stage.scaleX();
@@ -849,7 +1062,11 @@ export default class StateManager {
         StateManager._stage.batchDraw();
         StateManager.drawGrid();
     }
-    // method to reset the zoom scale to 100%
+
+    /**
+     * Resets the state diagram zoom level to 100%.
+     * @returns 
+     */
     public static resetZoom() {
         if (!StateManager._stage) {
             console.error('Stage is not initialized.');
@@ -861,7 +1078,10 @@ export default class StateManager {
         StateManager.drawGrid();
     }
 
-    // method to re-center the stage
+    /**
+     * Centers the view of the state diagram to the origin.
+     * @returns 
+     */
     public static centerStage() {
         if (!StateManager._stage) {
             console.error('Stage is not initialized.');
@@ -875,7 +1095,10 @@ export default class StateManager {
         StateManager._stage.batchDraw();
     }
 
-    // methods to zoom in and out by 10% (can adjust scale later if necessary)
+    /**
+     * Zooms the view in by 10%.
+     * @returns 
+     */
     public static zoomIn() {
         if (!StateManager._stage) {
             console.error('Stage is not initialized.');
@@ -885,6 +1108,10 @@ export default class StateManager {
         StateManager.applyZoom(scaleBy);
     }
 
+    /**
+     * Zooms the view out by 10%.
+     * @returns 
+     */
     public static zoomOut() {
         if (!StateManager._stage) {
             console.error('Stage is not initialized.');
@@ -894,7 +1121,10 @@ export default class StateManager {
         StateManager.applyZoom(scaleBy);
     }
 
-    // method to apply the zoom feature when buttons are pressed
+    /**
+     * Zooms the view in or out by a given ratio.
+     * @param scaleBy The ratio to scale the view by.
+     */
     private static applyZoom(scaleBy: number) {
         const oldScale = StateManager._stage.scaleX();
         const newScale = oldScale * scaleBy;
@@ -912,7 +1142,7 @@ export default class StateManager {
     }
 
 
-
+    /** Returns whether or not all node labels in the automaton are unique. */
     public static areAllLabelsUnique(): boolean {
         const labels = StateManager._nodeWrappers.map(node => node.labelText);
         const uniqueLabels = new Set(labels);
@@ -920,26 +1150,22 @@ export default class StateManager {
     }
 
 
+    /** Sets the array of tokens for the automaton. */
     public static set alphabet(newAlphabet: Array<TokenWrapper>) {
-        // const oldAlphabet = StateManager._alphabet;
         StateManager._alphabet = newAlphabet;
-
-        // oldAlphabet.forEach(tok => {
-        //     if (!newAlphabet.includes(tok)) {
-        //         // The token tok was removed from the alphabet, so we need
-        //         // to remove it from any transitions!
-        //         StateManager._transitionWrappers.forEach(transition => {
-        //             transition.removeToken(tok);
-        //         });
-        //     }
-        // });
     }
 
+    /**
+     * Gets a copy of the array of tokens for the automaton. Modifying this
+     * array (such as adding or removing elements) won't change the automaton's
+     * alphabet, but modifying the `TokenWrapper` objects inside of it will.
+     */
     public static get alphabet() {
         return [...StateManager._alphabet];
     }
 
-    public static get dfa() {
+    /** Gets a runnable DFA object from the current automaton. */
+    public static get dfa(): DFA {
         let outputDFA = new DFA();
         const stateManagerData = StateManager.toJSON();
         outputDFA.inputAlphabet = stateManagerData.alphabet.map((s) => s.symbol);
@@ -969,6 +1195,11 @@ export default class StateManager {
         return outputDFA;
     }
 
+    /**
+     * Converts the current automaton into a JSON object that can be
+     * serialized. Note that this is *not* a JSON string.
+     * @returns 
+     */
     public static toJSON() {
         return {
             states: StateManager._nodeWrappers.map(node => node.toJSON()),
@@ -979,6 +1210,10 @@ export default class StateManager {
         };
     }
 
+    /**
+     * Converts the current automaton to a JSON file, and downloads it to the
+     * user's device.
+     */
     public static downloadJSON() {
         const jsonString = JSON.stringify(StateManager.toJSON(), null, 4);
 
@@ -994,20 +1229,27 @@ export default class StateManager {
         document.body.removeChild(el);
     }
 
+    /**
+     * Attempts to load an automaton JSON from a user's file.
+     * @param ev 
+     */
     public static uploadJSON(ev: ChangeEvent<HTMLInputElement>) {
-        console.log(ev);
         const file = ev.target.files.item(0);
 
         const fileText = file.text()
             .then(text => {
-                console.log('success getting the file text!', JSON.parse(text));
                 StateManager.loadAutomaton(JSON.parse(text));
             },
                 reject_reason => {
-                    console.log('could not get file text, reason was', reject_reason);
+                    console.error('could not get file text, reason was', reject_reason);
                 });
     }
 
+    /**
+     * Loads the data from a deserialized JSON automaton representation
+     * into the program.
+     * @param json The deserialized JSON object to load.
+     */
     public static loadAutomaton(json: SerializedAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
@@ -1061,9 +1303,9 @@ export default class StateManager {
 
 
         this._stage.draw();
-        console.log('all loaded!');
     }
 
+    /** Sets whether or not dark mode is enabled. */
     public static set useDarkMode(val: boolean) {
         // Save new value
         this._useDarkMode = val;
@@ -1090,20 +1332,37 @@ export default class StateManager {
         StateManager._stage.draw();
     }
 
+    /** Gets whether or not dark mode is enabled. */
     public static get useDarkMode() {
         return this._useDarkMode;
     }
 
+    /** The initial position of one of the nodes when nodes are dragged. */
     private static _dragStatesStartPosition: Vector2d | null = null;
 
+    /**
+     * Stores the initial position of one of the nodes at the beginning of a
+     * node-dragging operation. This value is compared to the same node's
+     * position as the drag operation continues, so that the same offset is
+     * applied to all selected nodes and it appears the user is dragging all
+     * nodes at once.
+     * @param startPos The initial position of one of the nodes.
+     */
     public static startDragStatesOperation(startPos: Vector2d) {
         this._dragStatesStartPosition = startPos;
     }
 
+    /**
+     * Pushes an action to the action stack that moves the selected nodes
+     * by a certain amount.
+     * @param finalPos The final position of the same node as was used for
+     * `StateManager.startDragStatesOperation` at the beginning of this drag
+     * operation.
+     */
     public static completeDragStatesOperation(finalPos: Vector2d) {
         let startPos = this._dragStatesStartPosition;
         let endPos = finalPos;
-        let delta: Vector2d = {x: endPos.x - startPos.x, y: endPos.y - startPos.y};
+        let delta: Vector2d = { x: endPos.x - startPos.x, y: endPos.y - startPos.y };
 
         let moveStatesForward = (data: MoveStatesActionData) => {
             data.states.forEach((state) => {
@@ -1147,12 +1406,16 @@ export default class StateManager {
             moveStatesString,
             moveStatesForward,
             moveStatesBackward,
-            {delta: delta, states: [...this.selectedObjects]}
+            { delta: delta, states: [...this.selectedObjects] }
         );
 
         UndoRedoManager.pushAction(moveNodesAction, false);
     }
 
+    /**
+     * Updates the transition arrows for all of the transitions in the 
+     * automaton.
+     */
     public static updateTransitions() {
         StateManager._transitionWrappers.forEach(trans => {
             trans.updatePoints();
@@ -1161,6 +1424,14 @@ export default class StateManager {
     }
 }
 
+/**
+ * A representation of an automaton that can be converted to and from a JSON
+ * string.
+ * 
+ * **NOTE:** The name of this class may be inaccurate; it is perhaps more
+ * accurately a *deserialized* automaton, or alternatively a *serializable*
+ * automaton. We may want to rename this to be more accurate.
+ */
 interface SerializedAutomaton {
     states: Array<SerializedState>,
     alphabet: Array<SerializedToken>,
@@ -1169,6 +1440,13 @@ interface SerializedAutomaton {
     acceptStates: Array<string>
 }
 
+/**
+ * A representation of a node that can be converted to and from a JSON string.
+ * 
+ * **NOTE:** The name of this class may be inaccurate; it is perhaps more
+ * accurately a *deserialized* state, or alternatively a *serializable*
+ * state. We may want to rename this to be more accurate.
+ */
 interface SerializedState {
     id: string,
     x: number,
@@ -1176,11 +1454,26 @@ interface SerializedState {
     label: string
 }
 
+/**
+ * A representation of a token that can be converted to and from a JSON string.
+ * 
+ * **NOTE:** The name of this class may be inaccurate; it is perhaps more
+ * accurately a *deserialized* token, or alternatively a *serializable*
+ * token. We may want to rename this to be more accurate.
+ */
 interface SerializedToken {
     id: string,
     symbol: string
 }
 
+/**
+ * A representation of a transition that can be converted to and from a JSON
+ * string.
+ * 
+ * **NOTE:** The name of this class may be inaccurate; it is perhaps more
+ * accurately a *deserialized* transition, or alternatively a *serializable*
+ * transition. We may want to rename this to be more accurate.
+ */
 interface SerializedTransition {
     id: string,
     source: string,
@@ -1189,64 +1482,125 @@ interface SerializedTransition {
     tokens: Array<string>
 }
 
+/** Holds the data associated with a "create node" action. */
 class CreateNodeActionData extends ActionData {
+    /** The X coordinate where the node is created. */
     public x: number;
+
+    /** The Y coordinate where the node is created. */
     public y: number;
+
+    /** The node created in this action. */
     public node: NodeWrapper;
 }
 
+/** Holds the data associated with a "remove node" action. */
 class RemoveNodeActionData extends ActionData {
+    /** The node removed in this action. */
     public node: NodeWrapper;
+
+    /**
+     * Transitions associated with the node removed in this action, which
+     * also must be removed as part of the action.
+     */
     public transitions: Set<TransitionWrapper>;
+
+    /**
+     * Whether or not the node removed in this action was the automaton's
+     * start node.
+     */
     public isStart: boolean;
 }
 
+/** Holds the data associated with a "move nodes" action. */
 class MoveStatesActionData extends ActionData {
+    /** The amount by which nodes were moved in this action. */
     public delta: Vector2d;
+
+    /** The nodes moved in this action. */
     public states: Array<NodeWrapper>;
 }
 
+/** Holds the data associated with a "set node name" action. */
 class SetNodeNameActionData extends ActionData {
+    /** The name of the node before this action. */
     public oldName: string;
+
+    /** The name of the node after this action. */
     public newName: string;
+
+    /** The node renamed in this action. */
     public node: NodeWrapper;
 }
 
+/** Holds the data associated with a "set node is accept node" action. */
 class SetNodeIsAcceptActionData extends ActionData {
+    /** Whether or not the node was an accept node before this action. */
     public oldValue: boolean;
+
+    /** Whether or not the node was an accept node after this action. */
     public newValue: boolean;
+
+    /** The node to set the accept status of in this action. */
     public node: NodeWrapper;
 }
 
+/** Holds the data associated with a "set node as start node" action. */
 class SetNodeIsStartActionData extends ActionData {
+    /** The node that was the start node before this action. */
     public oldStart: NodeWrapper;
+
+    /** The node that was the start node after this action. */
     public newStart: NodeWrapper;
 }
 
+/** Holds the data associated with an "add transition" action. */
 class AddTransitionActionData extends ActionData {
+    /** The transition created in this action. */
     public transition: TransitionWrapper;
 }
 
+/** Holds the data associated with a "remove transition" action. */
 class RemoveTransitionActionData extends ActionData {
+    /** The transition removed in this action. */
     public transition: TransitionWrapper;
 }
 
+/** Holds the data associated with a "add/remove token to transition" action. */
 class SetTransitionAcceptsTokenData extends ActionData {
+    /** The transition modified in this action. */
     public transition: TransitionWrapper;
+
+    /** The token added to or removed from the transition in this action. */
     public token: TokenWrapper;
 }
 
+/** Holds the data associated with an "add token to automaton" action. */
 class AddTokenActionData extends ActionData {
+    /** The token created in this action. */
     public token: TokenWrapper;
 }
 
+/** Holds the data associated with a "remove token from automaton" action. */
 class RemoveTokenActionData extends ActionData {
+    /** The token removed in this action. */
     public token: TokenWrapper;
+
+    /**
+     * Transitions using this token at the time of this action, which must
+     * also have the token removed from them.
+     */
     public transitionsUsingToken: TransitionWrapper[];
 }
 
+/** Holds the data associated with a "set token symbol" action. */
 class SetTokenSymbolActionData extends ActionData {
+    /** The symbol for this token before this action. */
     public oldSymbol: string;
+
+    /** The symbol for this token after this action. */
     public newSymbol: string;
+
+    /** The token modified in this action. */
     public token: TokenWrapper;
 }

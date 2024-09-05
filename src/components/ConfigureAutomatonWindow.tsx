@@ -9,6 +9,13 @@ interface ListItem_TokenEditorProps {
     token: TokenWrapper
 }
 
+/**
+ * The editor for a single token within the automaton. From here, the user can
+ * edit the token's symbol or remove it from the automaton.
+ * @param props 
+ * @param {TokenWrapper} props.token The token that this list item will edit.
+ * @returns 
+ */
 function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEditorProps>) {
     const tw = props.token;
     const [tokenSymbol, setTokenSymbol] = useState(tw.symbol);
@@ -17,7 +24,9 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
         setTokenSymbol(newSymbol);
         StateManager.setTokenSymbol(tw, newSymbol);
     };
-    
+
+    // Track the action stack's location so that any undo/redo commands will
+    // update the UI to correctly reflect the current state.
     const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
         setTokenSymbol(tw.symbol);
@@ -25,11 +34,23 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
 
     return (
         <CoreListItem>
+            {/* Text field to input token's name/label */}
             <CoreListItem_Left>
-                <input className="focus:outline-none bg-transparent grow" type="text" minLength={1} maxLength={1} placeholder="Token symbol" value={tokenSymbol} onChange={e => updateTokenSymbol(e.target.value)}></input>
+                <input
+                    className="focus:outline-none bg-transparent grow"
+                    type="text"
+                    minLength={1}
+                    maxLength={1}
+                    placeholder="Token symbol"
+                    value={tokenSymbol}
+                    onChange={e => updateTokenSymbol(e.target.value)}></input>
             </CoreListItem_Left>
+
+            {/* Button to delete token */}
             <CoreListItem_Right>
-                <button className="flex-0 float-right px-2 block text-center text-red-500 align-middle" onClick={() => StateManager.removeToken(tw)}>
+                <button
+                    className="flex-0 float-right px-2 block text-center text-red-500 align-middle"
+                    onClick={() => StateManager.removeToken(tw)}>
                     <BsXCircleFill />
                 </button>
             </CoreListItem_Right>
@@ -37,24 +58,20 @@ function ListItem_TokenEditor(props: React.PropsWithChildren<ListItem_TokenEdito
     )
 }
 
+/**
+ * The UI with the list of tokens in the current alphabet. An "Add Token"
+ * button is included,so the user can add more tokens to the alphabet.
+ * @returns 
+ */
 function AlphabetList() {
-    // UNDERLYING IDEA HERE: Alphabet is stored in the React component's state.
-    // Whenever the React state variables are changed, push them to the StateManager.
-
     const [alphabet, setAlphabet] = useState(StateManager.alphabet);
 
     function addTokenToAlphabet() {
         StateManager.addToken();
-        // setAlphabet(StateManager.alphabet);
-        // const newAlphabet = [...alphabet];
-        // newAlphabet.push(new TokenWrapper());
-        // setAlphabet(newAlphabet);
     }
 
-    // useEffect(() => {
-    //     StateManager.alphabet = alphabet;
-    // }, [alphabet]);
-
+    // Track the action stack's location so that any undo/redo commands will
+    // update the UI to correctly reflect the current state.
     const [_, currentStackLocation] = useActionStack();
     useEffect(() => {
         setAlphabet(StateManager.alphabet);
@@ -71,7 +88,7 @@ function AlphabetList() {
             <CoreListItem>
                 <CoreListItem_Left>
                     <button className="text-blue-500 dark:text-blue-400 flex flex-row items-center" onClick={addTokenToAlphabet}>
-                        <BsPlusCircleFill className="mr-1"/>
+                        <BsPlusCircleFill className="mr-1" />
                         Add Token
                     </button>
                 </CoreListItem_Left>
@@ -79,17 +96,23 @@ function AlphabetList() {
         </div>
     </>);
 }
+
+/**
+ * The content for a window that allows the user to set information about
+ * their automaton that does not fit on the main screen. Currently, this just
+ * includes the alphabet.
+ * @returns 
+ */
 export default function ConfigureAutomatonWindow() {
+    // NOTE: The "Automaton Type" dropdown doesn't currently do anything in the
+    // actual program. Eventually, it will be used to change how the automaton
+    // is evaluated.
     const faTypeSelector = (
         <select name="automaton-type" id="automaton-type" className="float-right align-bottom dark:text-black">
             <option value="dfa">DFA</option>
             <option value="nfa">NFA</option>
         </select>
     );
-
-    const closeConfigWindow = () => {
-        console.log('close me');
-    };
 
     return (
         <div className="">

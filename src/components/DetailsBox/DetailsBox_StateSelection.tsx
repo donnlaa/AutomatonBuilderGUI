@@ -11,6 +11,16 @@ interface DetailsBox_StateSelectionProps {
     setStartNode: React.Dispatch<React.SetStateAction<NodeWrapper>>
 }
 
+/**
+ * Creates the UI for modifying a node, including its label, whether it is an
+ * accepting node, and whether it is the designated start node.
+ * @param props 
+ * @param {NodeWrapper} props.nodeWrapper The node that this editor will modify.
+ * @param {NodeWrapper} props.startNode The node currently marked as the start node.
+ * @param {React.Dispatch<React.SetStateAction<NodeWrapper>>} props.setStartNode
+ * A function for setting the start node.
+ * @returns 
+ */
 export default function DetailsBox_StateSelection(props: DetailsBox_StateSelectionProps) {
     const nw = props.nodeWrapper;
     const [nodeLabelText, setLabelText] = useState(nw.labelText);
@@ -44,7 +54,12 @@ export default function DetailsBox_StateSelection(props: DetailsBox_StateSelecti
     );
 
     let nodeAcceptInput = (
-        <input type="checkbox" id="is-accept-state" name="is-accept-state" checked={isAcceptNode} onChange={e => updateNodeIsAccept(e.target.checked)}></input>
+        <input
+            type="checkbox"
+            id="is-accept-state"
+            name="is-accept-state"
+            checked={isAcceptNode}
+            onChange={e => updateNodeIsAccept(e.target.checked)}></input>
     );
 
     let startStateClasses = `${isStartNodeInternal ? 'text-gray-700 dark:text-gray-300' : 'text-blue-500 dark:text-blue-400 '} flex flex-row items-center`

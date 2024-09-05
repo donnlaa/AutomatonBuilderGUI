@@ -1,4 +1,3 @@
-import NodeWrapper from "./NodeWrapper";
 import { v4 as uuidv4 } from "uuid";
 
 export default class UndoRedoManager {
@@ -105,13 +104,11 @@ export class Action {
 
     public forward() {
         this._forward(this._data);
-        console.log(`FORWARD: ${this.displayString}`);
     }
 
     public backward() {
         this._backward(this._data);
-        console.log(`BACKWARD: ${this.displayString}`);
     }
 }
 
-export class ActionData {}
+export class ActionData { }

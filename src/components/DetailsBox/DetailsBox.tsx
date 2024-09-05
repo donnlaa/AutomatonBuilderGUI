@@ -2,8 +2,6 @@ import { useState } from 'react';
 import NodeWrapper from "../../NodeWrapper";
 import SelectableObject from "../../SelectableObject";
 import TransitionWrapper from "../../TransitionWrapper";
-import DetailsBox_AlphabetEditor from "./DetailsBox_AlphabetEditor";
-import DetailsBox_MultipleSelection from "./DetailsBox_MultipleSelection";
 import DetailsBox_NoSelection from "./DetailsBox_NoSelection";
 import DetailsBox_StateSelection from "./DetailsBox_StateSelection";
 import DetailsBox_TransitionSelection from "./DetailsBox_TransitionSelection";
@@ -15,6 +13,16 @@ interface DetailsBoxProps {
   setStartNode: React.Dispatch<React.SetStateAction<NodeWrapper>>;
 }
 
+/**
+ * Displays editors for each selected item in the left-hand panel.
+ * @param props 
+ * @param {Array<SelectableObject>} selection An array of the currently-selected
+ * objects.
+ * @param {NodeWrapper} startNode The node currently selected as the start node.
+ * @param {React.Dispatch<React.SetStateAction<NodeWrapper>>} setStartNode A function
+ * to call for setting the start node to another node.
+ * @returns 
+ */
 export default function DetailsBox(props: DetailsBoxProps) {
   const [isSnapActive, setIsSnapActive] = useState(StateManager.isSnapToGridEnabled());
 
@@ -24,6 +32,7 @@ export default function DetailsBox(props: DetailsBoxProps) {
     setIsSnapActive(!isSnapActive); // Toggle the local UI state
   };
 
+  // For each item selected display its corresponding editor
   const selectionElements = props.selection.map((item, index) => {
     if (item instanceof NodeWrapper) {
       return (
