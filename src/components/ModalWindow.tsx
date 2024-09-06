@@ -6,6 +6,18 @@ interface ClosableModalWindowProps {
     close?: () => void
 }
 
+/**
+ * A window that darkens the screen behind it, preventing input to the main program.
+ * It also displays a title and a close button.
+ * 
+ * **NOTE:** The close button on its own does not do anything; you need to provide
+ * a function to it via `props.close`.
+ * @param props
+ * @param {title} [props.title] A title to display at the top of the modal window.
+ * @param {} [props.close] A function to run when the close button is clicked.
+ * @param {React.ReactNode | undefined} props.children The content to place inside this modal window.
+ * @returns 
+ */
 export function ClosableModalWindow(props: React.PropsWithChildren<ClosableModalWindowProps>) {
     return (<ModalWindow>
         <div className="m-3">
@@ -24,6 +36,17 @@ export function ClosableModalWindow(props: React.PropsWithChildren<ClosableModal
     </ModalWindow>);
 }
 
+/**
+ * A window that darkens the screen behind it, preventing input to the main program.
+ * Currently, this is used for the "Configure Automaton" window.
+ * 
+ * **NOTE:** This component does not include a way to close itself. You may want
+ * to instead use `ClosableModalWindow`, and pass a callback to it to close itself
+ * when its close button is clicked.
+ * @param props 
+ * @param {React.ReactNode | undefined} props.children The content to place inside this modal window.
+ * @returns 
+ */
 export default function ModalWindow(props: React.PropsWithChildren) {
     return (
         <>

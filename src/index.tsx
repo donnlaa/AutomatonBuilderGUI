@@ -7,12 +7,11 @@ import Toolbox from './components/Toolbox';
 import FloatingPanel from './components/FloatingPanel';
 import SelectableObject from './SelectableObject';
 import DetailsBox from './components/DetailsBox/DetailsBox';
-import ModalWindow, { ClosableModalWindow } from './components/ModalWindow';
+import { ClosableModalWindow } from './components/ModalWindow';
 import ConfigureAutomatonWindow from './components/ConfigureAutomatonWindow';
-import { BsGearFill, BsMoonFill, BsCheck2Circle } from 'react-icons/bs';
+import { BsGearFill, BsMoonFill } from 'react-icons/bs';
 import TestStringWindow from './components/TestStringWindow';
 import InformationBox, { InformationBoxType } from './components/InformationBox';
-import { testStringOnAutomata } from './components/TestStringOnAutomata';
 import { } from './components/TestStringWindow';
 import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,7 +22,9 @@ function App() {
     const [startNode, setStartNode] = useState(StateManager.startNode);
     const [isLabelUnique, setIsLabelUnique] = useState(true);
 
-    //Solution from this stackoverflow page: https://stackoverflow.com/questions/9626059/window-onbeforeunload-in-chrome-what-is-the-most-recent-fix
+    // Adds the "confirm close" modal when attempting to close the page.
+    // Solution from this stackoverflow page:
+    // https://stackoverflow.com/a/52358522
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             e.preventDefault();
@@ -56,37 +57,44 @@ function App() {
             else if (ev.code === "KeyS") {
                 setCurrentTool(Tool.Select);
             }
-
-            else if (ev.code === "KeyW") {
-                console.log(StateManager.toJSON());
-            }
         });
     }, []);
 
+    // When the user selects a different tool in the UI,
+    // update the StateManager to use that as the current tool.
     useEffect(() => {
         StateManager.currentTool = currentTool;
     }, [currentTool]);
 
+    // When the user changes their object selection, update the current
+    // list of selected objects.
     useEffect(() => {
         StateManager.selectedObjects = selectedObjects;
     }, [selectedObjects]);
 
+    // When the user changes the start node in the UI, push the action of
+    // making that node the start node to the action stack.
     useEffect(() => {
         StateManager.setNodeIsStart(startNode);
     }, [startNode]);
 
+    // Check if there is a token with an empty symbol/label.
     const emptyStringToken = StateManager.alphabet.some(token => token.symbol.trim() === '');
-    const isAutomatonValid =
 
-        useEffect(() => {
-            const unique = StateManager.areAllLabelsUnique();
-            setIsLabelUnique(unique);
-        }, [selectedObjects]);
+    // Keep track of if all tokens' labels are unique, every time the
+    // list of selected objects changes.
+    useEffect(() => {
+        const unique = StateManager.areAllLabelsUnique();
+        setIsLabelUnique(unique);
+    }, [selectedObjects]);
 
+    // React state and open/close functions for the "Configure Automaton"
+    // modal window.
     const [configWindowOpen, setConfigWindowOpen] = useState(false);
     const openConfigWindow = () => { setConfigWindowOpen(true); };
     const closeConfigWindow = () => { setConfigWindowOpen(false); };
 
+    // React state and enable/disable functions for dark mode.
     const [useDarkMode, setDarkMode] = useState(false);
     const toggleDarkMode = () => { setDarkMode(!useDarkMode); };
     useEffect(() => {
@@ -96,6 +104,7 @@ function App() {
     // Create a DFA from the current state, and get the errors from it
     let dfa = StateManager.dfa;
     let dfaErrors = dfa.getErrors();
+
     let errorBoxes = dfaErrors.map(err => {
         return (
             <div key={err.errorString()}>
@@ -123,7 +132,7 @@ function App() {
                         <AnimatePresence>
                             {errorBoxes}
                         </AnimatePresence>
-                        
+
 
                         {/* Example error message boxes commented out */}
                         {/*

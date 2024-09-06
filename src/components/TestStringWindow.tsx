@@ -2,10 +2,6 @@ import { SetStateAction, useState } from "react";
 import { testStringOnAutomata } from "./TestStringOnAutomata";
 import { BsFillClipboardCheckFill } from "react-icons/bs";
 import InformationBox, { InformationBoxType } from './InformationBox';
-import DFA from 'automaton-kit/lib/dfa/DFA';
-import DFATransition from 'automaton-kit/lib/dfa/DFATransition';
-import DFAState from 'automaton-kit/lib/dfa/DFAState';
-import StateManager from "../StateManager";
 
 export default function TestStringWindow() {
     const [testString, setTestString] = useState('');

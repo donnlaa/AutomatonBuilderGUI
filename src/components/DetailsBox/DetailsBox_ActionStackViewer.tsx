@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react";
-import StateManager from "../../StateManager";
-import UndoRedoManager, { Action } from "../../UndoRedoManager";
 import { useActionStack } from "../../utilities/ActionStackUtilities";
 import { AnimatePresence } from "framer-motion";
 import { motion } from "framer-motion";
-import { BsNodePlus } from "react-icons/bs";
 
 interface ActionRowItemProps {
     displayString: string;
@@ -12,14 +8,32 @@ interface ActionRowItemProps {
     greyedOut: boolean;
 }
 
+/**
+ * Represents a single action within the action stack.
+ * @param props 
+ * @param {string} props.displayString The text to display on the row item.
+ * @param {string} props.id A unique identifier for the row item, so it may
+ * persist across UI updates.
+ * @param {boolean} props.greyedOut Whether or not to display this row item
+ * with a grey text color. This is used when an item is beyond the current
+ * stack pointer, to indicate that its effect is not visible in the current
+ * state of the automaton.
+ * @returns 
+ */
 function ActionRowItem(props: ActionRowItemProps) {
-    const [_, currentStackLocation] = useActionStack();
     return (<div className={`border-t-2 border-zinc-400 ${props.greyedOut ? 'text-slate-500' : ''}`}>
-                {props.displayString}
-            </div>);
+        {props.displayString}
+    </div>);
 }
 
+/**
+ * Creates the UI for visualizing the action stack (actions that can be undone
+ * and redone).
+ * @returns 
+ */
 export default function DetailsBox_ActionStackViewer() {
+    // This component displays a list of items currently in the action stack.
+    // It allows the user to see what actions they can undo or redo.
     const [currentStack, currentStackLocation] = useActionStack();
     return (
         <div className="flex flex-col">
@@ -28,6 +42,11 @@ export default function DetailsBox_ActionStackViewer() {
                 <AnimatePresence>
                     {
                         currentStack.map((item, index) => {
+                            // If this action is ahead of the current stack location,
+                            // then it is accessible via the "redo" command.
+                            // For now, it should be greyed out since its effects
+                            // are not active.
+                            let aheadOfStackLocation = currentStack.length - index - 1 > currentStackLocation;
                             return (
                                 <motion.li
                                     initial={{ height: 0, opacity: 0 }}
@@ -35,9 +54,13 @@ export default function DetailsBox_ActionStackViewer() {
                                     exit={{ height: 0, opacity: 0 }}
                                     key={item.id}
                                 >
-                                    <ActionRowItem displayString={item.displayString} id={item.id} greyedOut={currentStack.length - index - 1 > currentStackLocation} />
+                                    <ActionRowItem
+                                        displayString={item.displayString}
+                                        id={item.id}
+                                        greyedOut={aheadOfStackLocation}
+                                    />
                                 </motion.li>
-                            )
+                            );
                         })
                     }
                 </AnimatePresence>

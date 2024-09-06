@@ -1,3 +1,6 @@
+/**
+ * The colors and visual parameters to use when dark mode is disabled.
+ */
 export const LightColorScheme = {
     tentativeTransitionArrowColor: 'red',
     selectedNodeStrokeColor: '#018ED5',
@@ -16,7 +19,7 @@ export const LightColorScheme = {
     nodeDragDropShadowColor: '#000000',
     nodeDragDropShadowOpacity: 0.2,
     nodeDragDropShadowBlur: 10,
-    
+
     transitionSelectedArrowColor: 'red',
     transitionArrowColor: 'black',
     transitionLabelColor: 'black',
@@ -24,6 +27,9 @@ export const LightColorScheme = {
     gridColor: "lightgrey",
 };
 
+/**
+ * The colors and visual parameters to use when dark mode is enabled.
+ */
 export const DarkColorScheme = {
     tentativeTransitionArrowColor: 'red',
     selectedNodeStrokeColor: '#018ED5',
@@ -42,7 +48,7 @@ export const DarkColorScheme = {
     nodeDragDropShadowColor: '#FFFFFF',
     nodeDragDropShadowOpacity: 0.3,
     nodeDragDropShadowBlur: 10,
-    
+
     transitionSelectedArrowColor: 'red',
     transitionArrowColor: '#E0E0E0',
     transitionLabelColor: 'white',
@@ -50,6 +56,9 @@ export const DarkColorScheme = {
     gridColor: "#303030",
 };
 
+/**
+ * The colors and visual parameters that can be configured for the color mode.
+ */
 export interface ColorScheme {
     tentativeTransitionArrowColor: string,
     selectedNodeStrokeColor: string,
@@ -68,7 +77,7 @@ export interface ColorScheme {
     nodeDragDropShadowColor: string,
     nodeDragDropShadowOpacity: number,
     nodeDragDropShadowBlur: number,
-    
+
     transitionSelectedArrowColor: string,
     transitionArrowColor: string,
     transitionLabelColor: string,

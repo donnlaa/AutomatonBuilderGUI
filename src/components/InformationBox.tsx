@@ -1,5 +1,8 @@
 import { BsXCircleFill, BsExclamationTriangleFill, BsEyeFill, BsInfoCircleFill, BsChevronRight, BsCheckCircle } from 'react-icons/bs';
 
+/**
+ * The type of information an `InformationBox` should convey.
+ */
 export enum InformationBoxType {
     Warning,
     Error,
@@ -10,18 +13,16 @@ interface InformationBoxProps {
     infoBoxType: InformationBoxType,
 }
 
-function AdditionalInfoButton() {
-    return (
-        <button className="rounded-full px-2 py-0 mr-2 block bg-red-600 text-white">
-            <div className='flex flex-row items-center place-content-center mx-0'>
-                <BsInfoCircleFill className='mr-1' />
-                Learn more
-                <BsChevronRight className='ml-1' />
-            </div>
-        </button>
-    );
-}
-
+/**
+ * Creates a red box with an error symbol in it and some associated text.
+ * It indicates to the user that there is an error with their automaton which
+ * needs to be fixed before the automaton can run.
+ * 
+ * **NOTE:** In most cases, it is preferable to use `InformationBox` with
+ * `infoBoxType` set to `InformationBoxType.Error`.
+ * @param {React.PropsWithChildren} props 
+ * @param {React.ReactNode | undefined} props.children The content of this box.
+ */
 function ErrorBox(props: React.PropsWithChildren) {
     return (
         <>
@@ -40,6 +41,16 @@ function ErrorBox(props: React.PropsWithChildren) {
     );
 }
 
+/**
+ * Creates a yellow box with a warning symbol in it and some associated text.
+ * It indicates to the user that there is a flaw with their automaton which may
+ * cause the automaton to not behave as expected.
+ * 
+ * **NOTE:** In most cases, it is preferable to use `InformationBox` with
+ * `infoBoxType` set to `InformationBoxType.Warning`.
+ * @param {React.PropsWithChildren} props 
+ * @param {React.ReactNode | undefined} props.children The content of this box.
+ */
 function WarningBox(props: React.PropsWithChildren) {
     return (
         <>
@@ -58,6 +69,15 @@ function WarningBox(props: React.PropsWithChildren) {
     );
 }
 
+/**
+ * Creates a red box with a success symbol in it and some associated text.
+ * It indicates to the user that an operation was completed successfully.
+ * 
+ * **NOTE:** In most cases, it is preferable to use `InformationBox` with
+ * `infoBoxType` set to `InformationBoxType.Success`.
+ * @param {React.PropsWithChildren} props 
+ * @param {React.ReactNode | undefined} props.children The content of this box.
+ */
 function SuccessBox(props: React.PropsWithChildren) {
     return (
         <>
@@ -76,33 +96,31 @@ function SuccessBox(props: React.PropsWithChildren) {
     );
 }
 
+/**
+ * Creates a box with a given theme (warning, error, or success) and some
+ * associated text.
+ * @param {React.PropsWithChildren<InformationBoxProps>} props
+ * @param {InformationBoxType} props.infoBoxType The type of information this box should convey.
+ * @param {React.ReactNode | undefined} props.children The content of this box.
+ */
 export default function InformationBox(props: React.PropsWithChildren<InformationBoxProps>) {
     switch (props.infoBoxType) {
         case InformationBoxType.Warning:
             return (
                 <WarningBox>
                     <div>{props.children}</div>
-                    {/* <div>
-                        <AdditionalInfoButton />
-                    </div> */}
                 </WarningBox>
             );
         case InformationBoxType.Error:
             return (
                 <ErrorBox>
                     <div>{props.children}</div>
-                    {/* <div>
-                        <AdditionalInfoButton />
-                    </div> */}
                 </ErrorBox>
             );
         case InformationBoxType.Success:
             return (
                 <SuccessBox>
                     <div>{props.children}</div>
-                    {/* <div>
-                        <AdditionalInfoButton />
-                    </div> */}
                 </SuccessBox>
             );
     }

@@ -1,29 +1,6 @@
 import DFARunner, { DFARunnerStatus } from 'automaton-kit/lib/dfa/DFARunner';
 import StateManager from '../StateManager';
 
-
-// (method) StateManager.toJSON(): {
-//     states: {
-//         id: string;
-//         x: number;
-//         y: number;
-//         label: string;
-//     }[];
-//     alphabet: {
-//         id: string;
-//         symbol: string;
-//     }[];
-//     transitions: {
-//         id: string;
-//         source: string;
-//         dest: string;
-//         isEpsilonTransition: boolean;
-//         tokens: string[];
-//     }[];
-//     startState: string;
-//     acceptStates: string[];
-// }
-
 export function testStringOnAutomata(testString: string): string {
     let myDFA = StateManager.dfa;
     let runner = new DFARunner(myDFA, testString.split(''));
