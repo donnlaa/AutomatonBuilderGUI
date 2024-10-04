@@ -109,11 +109,8 @@ export default class StateManager {
         return StateManager._snapToGridEnabled;
     }
 
+    /** Stores the currently copied or cut selectable objects for clipboard operations. */
     private static _clipboard: Array<SelectableObject> = [];
-
-    public static copySelectedObjects() {
-    this._clipboard = [...this._selectedObjects];
-    }
 
     /** Sets up the state manager and an empty automaton. */
     public static initialize() {
@@ -594,6 +591,12 @@ export default class StateManager {
         }
   }
 
+    /** Copy selected objects. */
+    public static copySelectedObjects() {
+      this._clipboard = [...this._selectedObjects];
+    }
+
+    /** Paste selected objects. */
     public static pasteClipboardObjects(
       offsetX: number = 20,
       offsetY: number = 20
