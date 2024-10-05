@@ -593,226 +593,227 @@ export default class StateManager {
 
     /** Copies the selected objects, including any transitions between selected nodes. */
     public static copySelectedObjects() {
-    // Copy selected nodes
-    const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
-  
-    // Find transitions between selected nodes
-    const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
-      selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
-    );
-  
-    // Combine selected nodes and transitions between them
-    this._clipboard = [...selectedNodes, ...transitionsBetweenSelectedNodes];
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Combine selected nodes and transitions between them
+        this._clipboard = [...selectedNodes, ...transitionsBetweenSelectedNodes];
     }
 
     /** Pastes the copied objects, including transitions between pasted nodes. */
     public static pasteClipboardObjects(offsetX: number = 20, offsetY: number = 20) {
-    if (!this._clipboard.length) {
-      console.warn("Clipboard is empty, nothing to paste.");
-      return;
-    }
-  
-    let pasteData = new PasteActionData();
-  
-    // Count the number of nodes to be pasted for action description
-    let nodeCount = this._clipboard.filter(obj => obj instanceof NodeWrapper).length;
-    let actionDescription = `Paste ${nodeCount} Object${nodeCount !== 1 ? 's' : ''}`;
-  
-    let performPasteForward = (data: PasteActionData) => {
-      if (data.nodes.length === 0) {
-        // First time performing paste, create nodes
-        const nodeMap = new Map<string, NodeWrapper>();
-  
-        // Create new nodes and map them to the original nodes
-        this._clipboard.forEach((obj) => {
-          if (obj instanceof NodeWrapper) {
-            const newNode = new NodeWrapper(`q${StateManager._nextStateId++}`);
-            const position = obj.nodeGroup.position();
-            newNode.createKonvaObjects(position.x + offsetX, position.y + offsetY);
-            newNode.labelText = obj.labelText; // Copy label
-            newNode.isAcceptNode = obj.isAcceptNode; // Copy accept state status
-            StateManager._nodeWrappers.push(newNode);
-            StateManager._nodeLayer.add(newNode.nodeGroup);
-  
-            data.nodes.push(newNode);
-            nodeMap.set(obj.id, newNode);
-          }
-        });
-  
-        // Create new transitions using the new nodes
-        this._clipboard.forEach((obj) => {
-          if (obj instanceof TransitionWrapper) {
-            const sourceNode = nodeMap.get(obj.sourceNode.id);
-            const destNode = nodeMap.get(obj.destNode.id);
-  
-            // Only create transitions if both source and dest nodes were copied
-            if (sourceNode && destNode) {
-              const newTransition = new TransitionWrapper(
-                sourceNode,
-                destNode,
-                obj.isEpsilonTransition,
-                new Set(obj.tokens) // Copy tokens
-              );
-  
-              StateManager._transitionWrappers.push(newTransition);
-              StateManager._transitionLayer.add(newTransition.konvaGroup);
-  
-              data.transitions.push(newTransition);
-            }
-          }
-        });
-      } else {
-        // Redoing the paste action, reuse nodes and transitions
-        data.nodes.forEach((node) => {
-          StateManager._nodeWrappers.push(node);
-          StateManager._nodeLayer.add(node.nodeGroup);
-        });
-  
-        data.transitions.forEach((transition) => {
-          StateManager._transitionWrappers.push(transition);
-          StateManager._transitionLayer.add(transition.konvaGroup);
-        });
-      }
-  
-      StateManager._nodeLayer?.draw();
-      StateManager._transitionLayer?.draw();
-      StateManager.updateTransitions();
-  
-      // Select the newly pasted nodes
-      StateManager.deselectAllObjects();
-      data.nodes.forEach((node) => StateManager.selectObject(node));
-    };
-  
-    let performPasteBackward = (data: PasteActionData) => {
-      // Deselect all objects
-      StateManager.deselectAllObjects();
-  
-      // Remove transitions
-      data.transitions.forEach((transition) => {
-        StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
-        transition.konvaGroup.remove();
-      });
-  
-      // Remove nodes
-      data.nodes.forEach((node) => {
-        StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
-        node.nodeGroup.remove();
-  
-        // If any of the nodes were the start node, reset the start node
-        if (StateManager.startNode === node) {
-          StateManager.startNode = null;
+        if (!this._clipboard.length) {
+            console.warn("Clipboard is empty, nothing to paste.");
+            return;
         }
-      });
-  
-      StateManager._nodeLayer?.draw();
-      StateManager._transitionLayer?.draw();
-      StateManager.updateTransitions();
-    };
-  
-    let pasteAction = new Action(
-      "pasteClipboardObjects",
-      actionDescription,
-      performPasteForward,
-      performPasteBackward,
-      pasteData
-    );
-  
-    UndoRedoManager.pushAction(pasteAction);
+
+        let pasteData = new PasteActionData();
+
+        // Count the number of nodes to be pasted for action description
+        let nodeCount = this._clipboard.filter(obj => obj instanceof NodeWrapper).length;
+        let actionDescription = `Paste ${nodeCount} Object${nodeCount !== 1 ? 's' : ''}`;
+
+        let performPasteForward = (data: PasteActionData) => {
+            if (data.nodes.length === 0) {
+                // First time performing paste, create nodes
+                const nodeMap = new Map<string, NodeWrapper>();
+
+                // Create new nodes and map them to the original nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof NodeWrapper) {
+                        const newNode = new NodeWrapper(`q${StateManager._nextStateId++}`);
+                        const position = obj.nodeGroup.position();
+                        newNode.createKonvaObjects(position.x + offsetX, position.y + offsetY);
+                        newNode.labelText = obj.labelText; // Copy label
+                        newNode.isAcceptNode = obj.isAcceptNode; // Copy accept state status
+                        StateManager._nodeWrappers.push(newNode);
+                        StateManager._nodeLayer.add(newNode.nodeGroup);
+
+                        data.nodes.push(newNode);
+                        nodeMap.set(obj.id, newNode);
+                    }
+                });
+
+                // Create new transitions using the new nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof TransitionWrapper) {
+                        const sourceNode = nodeMap.get(obj.sourceNode.id);
+                        const destNode = nodeMap.get(obj.destNode.id);
+
+                        // Only create transitions if both source and dest nodes were copied
+                        if (sourceNode && destNode) {
+                            const newTransition = new TransitionWrapper(
+                                sourceNode,
+                                destNode,
+                                obj.isEpsilonTransition,
+                                new Set(obj.tokens) // Copy tokens
+                            );
+
+                            StateManager._transitionWrappers.push(newTransition);
+                            StateManager._transitionLayer.add(newTransition.konvaGroup);
+
+                            data.transitions.push(newTransition);
+                        }
+                    }
+                });
+            } else {
+                // Redoing the paste action, reuse nodes and transitions
+                data.nodes.forEach((node) => {
+                    StateManager._nodeWrappers.push(node);
+                    StateManager._nodeLayer.add(node.nodeGroup);
+                });
+
+                data.transitions.forEach((transition) => {
+                    StateManager._transitionWrappers.push(transition);
+                    StateManager._transitionLayer.add(transition.konvaGroup);
+                });
+            }
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Select the newly pasted nodes
+            StateManager.deselectAllObjects();
+            data.nodes.forEach((node) => StateManager.selectObject(node));
+        };
+
+        let performPasteBackward = (data: PasteActionData) => {
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // If any of the nodes were the start node, reset the start node
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let pasteAction = new Action(
+            "pasteClipboardObjects",
+            actionDescription,
+            performPasteForward,
+            performPasteBackward,
+            pasteData
+        );
+
+        UndoRedoManager.pushAction(pasteAction);
     }
 
-    /** Cuts the selected objects, including any transitions between selected nodes. */
+   /** Cuts the selected objects, including any transitions between selected nodes. */
     public static cutSelectedObjects() {
-    if (this._selectedObjects.length === 0) {
-      console.warn("No objects selected, nothing to cut.");
-      return;
+        if (this._selectedObjects.length === 0) {
+            console.warn("No objects selected, nothing to cut.");
+            return;
+        }
+
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Copy selected transitions
+        const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
+
+        // Combine selected nodes and transitions
+        this._clipboard = [...selectedNodes, ...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Create an action to remove the selected objects
+        let cutData = new CutActionData();
+
+        cutData.nodes = selectedNodes;
+        cutData.transitions = [...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Save start node if it's being cut
+        cutData.wasStartNode = cutData.nodes.includes(StateManager.startNode);
+
+        let totalObjects = cutData.nodes.length + cutData.transitions.length;
+        let actionDescription = `Cut ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
+
+        let performCutForward = (data: CutActionData) => {
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // Reset start node if necessary
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+        };
+
+        let performCutBackward = (data: CutActionData) => {
+            // Add nodes back
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers.push(node);
+                StateManager._nodeLayer.add(node.nodeGroup);
+
+                // Restore start node if necessary
+                if (data.wasStartNode && StateManager.startNode == null) {
+                    StateManager.startNode = node;
+                }
+            });
+
+            // Add transitions back
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let cutAction = new Action(
+            "cutSelectedObjects",
+            actionDescription,
+            performCutForward,
+            performCutBackward,
+            cutData
+        );
+
+        UndoRedoManager.pushAction(cutAction);
+
+        StateManager.deselectAllObjects();
     }
-  
-    // Copy selected nodes
-    const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
-  
-    // Find transitions between selected nodes
-    const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
-      selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
-    );
-  
-    // Copy selected transitions
-    const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
-  
-    // Combine selected nodes and transitions
-    this._clipboard = [...selectedNodes, ...selectedTransitions, ...transitionsBetweenSelectedNodes];
-  
-    // Create an action to remove the selected objects
-    let cutData = new CutActionData();
-  
-    cutData.nodes = selectedNodes;
-    cutData.transitions = [...selectedTransitions, ...transitionsBetweenSelectedNodes];
-  
-    // Save start node if it's being cut
-    cutData.wasStartNode = cutData.nodes.includes(StateManager.startNode);
-  
-    let totalObjects = cutData.nodes.length + cutData.transitions.length;
-    let actionDescription = `Cut ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
-  
-    let performCutForward = (data: CutActionData) => {
-      // Remove transitions
-      data.transitions.forEach((transition) => {
-        StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
-        transition.konvaGroup.remove();
-      });
-  
-      // Remove nodes
-      data.nodes.forEach((node) => {
-        StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
-        node.nodeGroup.remove();
-  
-        // Reset start node if necessary
-        if (StateManager.startNode === node) {
-          StateManager.startNode = null;
-        }
-      });
-  
-      StateManager._nodeLayer?.draw();
-      StateManager._transitionLayer?.draw();
-      StateManager.updateTransitions();
-  
-      StateManager.deselectAllObjects();
-    };
-  
-    let performCutBackward = (data: CutActionData) => {
-      // Add nodes back
-      data.nodes.forEach((node) => {
-        StateManager._nodeWrappers.push(node);
-        StateManager._nodeLayer.add(node.nodeGroup);
-  
-        // Restore start node if necessary
-        if (data.wasStartNode && StateManager.startNode == null) {
-          StateManager.startNode = node;
-        }
-      });
-  
-      // Add transitions back
-      data.transitions.forEach((transition) => {
-        StateManager._transitionWrappers.push(transition);
-        StateManager._transitionLayer.add(transition.konvaGroup);
-      });
-  
-      StateManager._nodeLayer?.draw();
-      StateManager._transitionLayer?.draw();
-      StateManager.updateTransitions();
-    };
-  
-    let cutAction = new Action(
-      "cutSelectedObjects",
-      actionDescription,
-      performCutForward,
-      performCutBackward,
-      cutData
-    );
-  
-    UndoRedoManager.pushAction(cutAction);
-  
-    StateManager.deselectAllObjects();
-  }
 
     /**
      * Starts the creation of a new transition from a given source node.
