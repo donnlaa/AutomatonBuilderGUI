@@ -105,8 +105,13 @@ export default class StateManager {
     }
 
     /** Returns whether or not nodes snap to the grid. */
-    public static isSnapToGridEnabled(): boolean {
+    public static get snapToGridEnabled(): boolean {
         return StateManager._snapToGridEnabled;
+    }
+
+    /** Returns whether or not nodes snap to the grid. */
+    public static set snapToGridEnabled(newValue: boolean) {
+        StateManager._snapToGridEnabled = newValue;
     }
 
     /** Stores the currently copied or cut selectable objects for clipboard operations. */

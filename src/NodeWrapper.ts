@@ -401,7 +401,7 @@ export default class NodeWrapper extends SelectableObject {
   public onDragEnd() {
     if (StateManager.currentTool === Tool.States) {
     }
-    else if (StateManager.currentTool === Tool.Select && StateManager.isSnapToGridEnabled()) {
+    else if (StateManager.currentTool === Tool.Select && StateManager.snapToGridEnabled) {
 
       // Get the node's current position relative to the stage
       const nodePos = this.nodeGroup.position();
