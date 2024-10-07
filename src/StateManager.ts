@@ -1497,7 +1497,7 @@ export default class StateManager {
      * into the program.
      * @param json The deserialized JSON object to load.
      */
-    public static loadAutomaton(json: SerializedAutomaton) {
+    public static loadAutomaton(json: SerializableAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
         // TODO: Clear all current stuff
@@ -1674,27 +1674,19 @@ export default class StateManager {
 /**
  * A representation of an automaton that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* automaton, or alternatively a *serializable*
- * automaton. We may want to rename this to be more accurate.
  */
-interface SerializedAutomaton {
-    states: Array<SerializedState>,
-    alphabet: Array<SerializedToken>,
-    transitions: Array<SerializedTransition>,
+interface SerializableAutomaton {
+    states: Array<SerializableState>,
+    alphabet: Array<SerializableToken>,
+    transitions: Array<SerializableTransition>,
     startState: string,
     acceptStates: Array<string>
 }
 
 /**
  * A representation of a node that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* state, or alternatively a *serializable*
- * state. We may want to rename this to be more accurate.
  */
-interface SerializedState {
+interface SerializableState {
     id: string,
     x: number,
     y: number,
@@ -1703,12 +1695,8 @@ interface SerializedState {
 
 /**
  * A representation of a token that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* token, or alternatively a *serializable*
- * token. We may want to rename this to be more accurate.
  */
-interface SerializedToken {
+interface SerializableToken {
     id: string,
     symbol: string
 }
@@ -1716,12 +1704,8 @@ interface SerializedToken {
 /**
  * A representation of a transition that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* transition, or alternatively a *serializable*
- * transition. We may want to rename this to be more accurate.
  */
-interface SerializedTransition {
+interface SerializableTransition {
     id: string,
     source: string,
     dest: string,
