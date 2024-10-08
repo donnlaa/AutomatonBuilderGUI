@@ -970,6 +970,13 @@ export default class StateManager {
         StateManager._selectedObjects = [];
     }
 
+    /** Adds all objects to the current selection. */
+    public static selectAllObjects() {
+        StateManager._nodeWrappers.forEach((obj) => StateManager.selectObject(obj));
+        StateManager._transitionWrappers.forEach((obj) => StateManager.selectObject(obj));
+        StateManager.setSelectedObjects([]);
+    }
+
     /**
      * Removes all currently-selected objects from the automaton, in an
      * undo/redo safe manner.
@@ -1253,7 +1260,9 @@ export default class StateManager {
     public static loadAutomaton(json: SerializedAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
-        // TODO: Clear all current stuff
+        // Select all current items and then delete them
+        StateManager.selectAllObjects();
+        StateManager.deleteAllSelectedObjects();
 
         // Load each state
         states.forEach(state => {
