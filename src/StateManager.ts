@@ -387,8 +387,8 @@ export default class StateManager {
             data.node.deselect();
 
             // Remove the node itself
-            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
-                return node !== node;
+            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(toDelete => {
+                return node !== toDelete;
             });
             data.node.nodeGroup.remove();
 
@@ -1120,6 +1120,20 @@ export default class StateManager {
         const scaleBy = 0.9;  // Decrease scale by 10%
         StateManager.applyZoom(scaleBy);
     }
+    /**
+     * Clear out the automaton and alphabet
+     * 
+     * 
+     */
+    public static clearMachine() {
+        //StateManager.deselectAllObjects();
+        StateManager._nodeWrappers.forEach(n => StateManager.selectObject(n));
+        StateManager.deleteAllSelectedObjects();
+        StateManager._nextStateId=0;
+        UndoRedoManager.reset();
+
+    }
+    
 
     /**
      * Zooms the view in or out by a given ratio.
@@ -1423,6 +1437,8 @@ export default class StateManager {
         StateManager._transitionLayer.draw();
     }
 }
+
+        
 
 /**
  * A representation of an automaton that can be converted to and from a JSON
