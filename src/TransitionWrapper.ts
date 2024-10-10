@@ -46,6 +46,11 @@ export default class TransitionWrapper extends SelectableObject {
         return this._id;
     }
 
+    /** Gets the tokens associated with this transition. */
+    public get tokens(): Set<TokenWrapper> {
+      return this._tokens;
+    }
+
     /**
      * Constructs a new transition wrapper that connects one node to another
      * on specific tokens.
