@@ -1122,6 +1122,8 @@ export default class StateManager {
     }
     /**
      * Clear out the automaton and alphabet
+     * then reset state ID to 0
+     * then reset action stack
      * 
      * 
      */
@@ -1129,6 +1131,7 @@ export default class StateManager {
         //StateManager.deselectAllObjects();
         StateManager._nodeWrappers.forEach(n => StateManager.selectObject(n));
         StateManager.deleteAllSelectedObjects();
+        StateManager._alphabet.forEach(t => StateManager.removeToken(t));
         StateManager._nextStateId=0;
         UndoRedoManager.reset();
 
