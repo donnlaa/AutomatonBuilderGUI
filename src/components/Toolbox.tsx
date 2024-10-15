@@ -2,9 +2,9 @@ import { Tool } from '../Tool';
 import ToolButton from './ToolButton';
 import StateManager from '../StateManager';
 import { useRef } from 'react';
-import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut } from 'react-icons/bs';
+import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
-import { BiReset } from "react-icons/bi";
+import { BiCake, BiReset, BiSave, BiTrash } from "react-icons/bi";
 
 interface ToolboxProps {
     currentTool: Tool
@@ -74,6 +74,24 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
                     <BsZoomOut />
                 </div>
             </button>
+            {/* Clear Stage No Save Button */}
+            <button className='rounded-full p-2 m-10 mx-2 block bg-red-500 text-white text-center' onClick={StateManager.clearMachine} title="Clear the Automaton">
+                <div className='flex flex-row items-center justify-center'>
+                    <BiTrash />
+                </div>
+            </button>
+            {/* Undo Button */}
+            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.undoState} title="Undo most recent action">
+                <div className='flex flex-row items-center justify-center'>
+                    <BsFillArrowLeftCircleFill />
+                </div>
+            </button>
+            {/* Redo Button */}
+            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.redoState} title="Redo most recent action">
+                <div className='flex flex-row items-center justify-center'>
+                    <BsFillArrowRightCircleFill />
+                </div>
+            </button>                                    
         </div>
     );
 }

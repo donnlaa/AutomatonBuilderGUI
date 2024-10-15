@@ -105,9 +105,17 @@ export default class StateManager {
     }
 
     /** Returns whether or not nodes snap to the grid. */
-    public static isSnapToGridEnabled(): boolean {
+    public static get snapToGridEnabled(): boolean {
         return StateManager._snapToGridEnabled;
     }
+
+    /** Returns whether or not nodes snap to the grid. */
+    public static set snapToGridEnabled(newValue: boolean) {
+        StateManager._snapToGridEnabled = newValue;
+    }
+
+    /** Stores the currently copied or cut selectable objects for clipboard operations. */
+    private static _clipboard: Array<SelectableObject> = [];
 
     /** Sets up the state manager and an empty automaton. */
     public static initialize() {
@@ -387,8 +395,8 @@ export default class StateManager {
             data.node.deselect();
 
             // Remove the node itself
-            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
-                return node !== node;
+            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(toDelete => {
+                return node !== toDelete;
             });
             data.node.nodeGroup.remove();
 
@@ -566,6 +574,250 @@ export default class StateManager {
             }
             return;
         }
+
+         // **Handle Ctrl+C (Copy)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "c") {
+          ev.preventDefault();
+          StateManager.copySelectedObjects();
+          return;
+        }
+
+        // **Handle Ctrl+X (Cut)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "x") {
+          ev.preventDefault();
+          StateManager.cutSelectedObjects();
+          return;
+        }
+        // **Handle Ctrl+V (Paste)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "v") {
+          ev.preventDefault();
+          StateManager.pasteClipboardObjects();
+          return;
+        }
+    }
+
+    /** Copies the selected objects, including any transitions between selected nodes. */
+    public static copySelectedObjects() {
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Combine selected nodes and transitions between them
+        this._clipboard = [...selectedNodes, ...transitionsBetweenSelectedNodes];
+    }
+
+    /** Pastes the copied objects, including transitions between pasted nodes. */
+    public static pasteClipboardObjects(offsetX: number = 20, offsetY: number = 20) {
+        if (!this._clipboard.length) {
+            console.warn("Clipboard is empty, nothing to paste.");
+            return;
+        }
+
+        let pasteData = new PasteActionData();
+
+        // Count the number of nodes to be pasted for action description
+        let nodeCount = this._clipboard.filter(obj => obj instanceof NodeWrapper).length;
+        let actionDescription = `Paste ${nodeCount} Object${nodeCount !== 1 ? 's' : ''}`;
+
+        let performPasteForward = (data: PasteActionData) => {
+            if (data.nodes.length === 0) {
+                // First time performing paste, create nodes
+                const nodeMap = new Map<string, NodeWrapper>();
+
+                // Create new nodes and map them to the original nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof NodeWrapper) {
+                        const newNode = new NodeWrapper(`q${StateManager._nextStateId++}`);
+                        const position = obj.nodeGroup.position();
+                        newNode.createKonvaObjects(position.x + offsetX, position.y + offsetY);
+                        newNode.labelText = obj.labelText; // Copy label
+                        newNode.isAcceptNode = obj.isAcceptNode; // Copy accept state status
+                        StateManager._nodeWrappers.push(newNode);
+                        StateManager._nodeLayer.add(newNode.nodeGroup);
+
+                        data.nodes.push(newNode);
+                        nodeMap.set(obj.id, newNode);
+                    }
+                });
+
+                // Create new transitions using the new nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof TransitionWrapper) {
+                        const sourceNode = nodeMap.get(obj.sourceNode.id);
+                        const destNode = nodeMap.get(obj.destNode.id);
+
+                        // Only create transitions if both source and dest nodes were copied
+                        if (sourceNode && destNode) {
+                            const newTransition = new TransitionWrapper(
+                                sourceNode,
+                                destNode,
+                                obj.isEpsilonTransition,
+                                new Set(obj.tokens) // Copy tokens
+                            );
+
+                            StateManager._transitionWrappers.push(newTransition);
+                            StateManager._transitionLayer.add(newTransition.konvaGroup);
+
+                            data.transitions.push(newTransition);
+                        }
+                    }
+                });
+            } else {
+                // Redoing the paste action, reuse nodes and transitions
+                data.nodes.forEach((node) => {
+                    StateManager._nodeWrappers.push(node);
+                    StateManager._nodeLayer.add(node.nodeGroup);
+                });
+
+                data.transitions.forEach((transition) => {
+                    StateManager._transitionWrappers.push(transition);
+                    StateManager._transitionLayer.add(transition.konvaGroup);
+                });
+            }
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Select the newly pasted nodes
+            StateManager.deselectAllObjects();
+            data.nodes.forEach((node) => StateManager.selectObject(node));
+        };
+
+        let performPasteBackward = (data: PasteActionData) => {
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // If any of the nodes were the start node, reset the start node
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let pasteAction = new Action(
+            "pasteClipboardObjects",
+            actionDescription,
+            performPasteForward,
+            performPasteBackward,
+            pasteData
+        );
+
+        UndoRedoManager.pushAction(pasteAction);
+    }
+
+   /** Cuts the selected objects, including any transitions between selected nodes. */
+    public static cutSelectedObjects() {
+        if (this._selectedObjects.length === 0) {
+            console.warn("No objects selected, nothing to cut.");
+            return;
+        }
+
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Copy selected transitions
+        const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
+
+        // Combine selected nodes and transitions
+        this._clipboard = [...selectedNodes, ...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Create an action to remove the selected objects
+        let cutData = new CutActionData();
+
+        cutData.nodes = selectedNodes;
+        cutData.transitions = [...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Save start node if it's being cut
+        cutData.wasStartNode = cutData.nodes.includes(StateManager.startNode);
+
+        let totalObjects = cutData.nodes.length + cutData.transitions.length;
+        let actionDescription = `Cut ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
+
+        let performCutForward = (data: CutActionData) => {
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // Reset start node if necessary
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+        };
+
+        let performCutBackward = (data: CutActionData) => {
+            // Add nodes back
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers.push(node);
+                StateManager._nodeLayer.add(node.nodeGroup);
+
+                // Restore start node if necessary
+                if (data.wasStartNode && StateManager.startNode == null) {
+                    StateManager.startNode = node;
+                }
+            });
+
+            // Add transitions back
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let cutAction = new Action(
+            "cutSelectedObjects",
+            actionDescription,
+            performCutForward,
+            performCutBackward,
+            cutData
+        );
+
+        UndoRedoManager.pushAction(cutAction);
+
+        StateManager.deselectAllObjects();
     }
 
     /**
@@ -1127,6 +1379,23 @@ export default class StateManager {
         const scaleBy = 0.9;  // Decrease scale by 10%
         StateManager.applyZoom(scaleBy);
     }
+    /**
+     * Clear out the automaton and alphabet
+     * then reset state ID to 0
+     * then reset action stack
+     * 
+     * 
+     */
+    public static clearMachine() {
+        //StateManager.deselectAllObjects();
+        StateManager._nodeWrappers.forEach(n => StateManager.selectObject(n));
+        StateManager.deleteAllSelectedObjects();
+        StateManager._alphabet.forEach(t => StateManager.removeToken(t));
+        StateManager._nextStateId=0;
+        UndoRedoManager.reset();
+
+    }
+    
 
     /**
      * Zooms the view in or out by a given ratio.
@@ -1257,7 +1526,7 @@ export default class StateManager {
      * into the program.
      * @param json The deserialized JSON object to load.
      */
-    public static loadAutomaton(json: SerializedAutomaton) {
+    public static loadAutomaton(json: SerializableAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
         // Select all current items and then delete them
@@ -1431,32 +1700,41 @@ export default class StateManager {
         });
         StateManager._transitionLayer.draw();
     }
+    /**
+     * Wrapper function for the undoredomanager.undo to be accessed via a button and update properly
+     */
+    public static undoState() {
+        UndoRedoManager.undo();
+        return;
+    }
+    /**
+     * Wrapper function for the undoredomanager.redo to be accessed via a button and update properly
+     */
+    public static redoState() {
+        UndoRedoManager.redo();
+        return;
+    }    
+
 }
+
+        
 
 /**
  * A representation of an automaton that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* automaton, or alternatively a *serializable*
- * automaton. We may want to rename this to be more accurate.
  */
-interface SerializedAutomaton {
-    states: Array<SerializedState>,
-    alphabet: Array<SerializedToken>,
-    transitions: Array<SerializedTransition>,
+interface SerializableAutomaton {
+    states: Array<SerializableState>,
+    alphabet: Array<SerializableToken>,
+    transitions: Array<SerializableTransition>,
     startState: string,
     acceptStates: Array<string>
 }
 
 /**
  * A representation of a node that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* state, or alternatively a *serializable*
- * state. We may want to rename this to be more accurate.
  */
-interface SerializedState {
+interface SerializableState {
     id: string,
     x: number,
     y: number,
@@ -1465,12 +1743,8 @@ interface SerializedState {
 
 /**
  * A representation of a token that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* token, or alternatively a *serializable*
- * token. We may want to rename this to be more accurate.
  */
-interface SerializedToken {
+interface SerializableToken {
     id: string,
     symbol: string
 }
@@ -1478,12 +1752,8 @@ interface SerializedToken {
 /**
  * A representation of a transition that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* transition, or alternatively a *serializable*
- * transition. We may want to rename this to be more accurate.
  */
-interface SerializedTransition {
+interface SerializableTransition {
     id: string,
     source: string,
     dest: string,
@@ -1612,4 +1882,25 @@ class SetTokenSymbolActionData extends ActionData {
 
     /** The token modified in this action. */
     public token: TokenWrapper;
+}
+
+/** Holds the data associated with a "paste" action. */
+class PasteActionData extends ActionData {
+  /** The nodes created in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions created in this action. */
+  public transitions: TransitionWrapper[] = [];
+}
+
+/** Holds the data associated with a "cut" action. */
+class CutActionData extends ActionData {
+  /** The nodes removed in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions removed in this action. */
+  public transitions: TransitionWrapper[] = [];
+
+  /** Whether any of the nodes removed were the start node. */
+  public wasStartNode: boolean = false;
 }
