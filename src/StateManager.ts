@@ -1691,6 +1691,21 @@ export default class StateManager {
         });
         StateManager._transitionLayer.draw();
     }
+    /**
+     * Wrapper function for the undoredomanager.undo to be accessed via a button and update properly
+     */
+    public static undoState() {
+        UndoRedoManager.undo();
+        return;
+    }
+    /**
+     * Wrapper function for the undoredomanager.redo to be accessed via a button and update properly
+     */
+    public static redoState() {
+        UndoRedoManager.redo();
+        return;
+    }    
+
 }
 
         
