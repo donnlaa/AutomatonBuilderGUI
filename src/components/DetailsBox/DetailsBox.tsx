@@ -24,7 +24,7 @@ interface DetailsBoxProps {
  * @returns 
  */
 export default function DetailsBox(props: DetailsBoxProps) {
-  const [isSnapActive, setIsSnapActive] = useState(StateManager.isSnapToGridEnabled());
+  const [isSnapActive, setIsSnapActive] = useState(StateManager.snapToGridEnabled);
 
   // Function to toggle snap to grid feature on/off
   const handleToggleSnap = () => {
