@@ -2,8 +2,10 @@ import { Tool } from '../Tool';
 import ToolButton from './ToolButton';
 import StateManager from '../StateManager';
 import { useRef } from 'react';
+import { useState } from 'react';
 import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
+import { GrGrid } from "react-icons/gr";
 import { BiCake, BiReset, BiSave, BiTrash } from "react-icons/bi";
 
 interface ToolboxProps {
@@ -18,7 +20,14 @@ interface ToolboxProps {
  * @param {React.Dispatch<React.SetStateAction<Tool>>} props.setCurrentTool A function for setting the current tool.
  */
 export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
+    const [isSnapActive, setIsSnapActive] = useState(StateManager.snapToGridEnabled);
     const fileInputRef = useRef<HTMLInputElement>(null); // Create a ref for the file input
+
+    // Function to toggle snap to grid feature on/off
+    const handleToggleSnap = () => {
+        StateManager.toggleSnapToGrid();
+        setIsSnapActive(!isSnapActive); // Toggle the local UI state
+    };
 
     // Function to trigger file input click event
     const handleLoadButtonClick = () => {
@@ -43,6 +52,12 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
                 </div>
             </ToolButton>
             <div className='grow'></div>
+            {/* Enable Snap to Grid Button */}
+            <button className={`rounded-full p-2 m-1 mx-2 block text-white text-center ${isSnapActive ? 'bg-fuchsia-800' : 'bg-fuchsia-500'}`} onClick={handleToggleSnap} title={isSnapActive ? 'Disable Snap to Grid' : 'Enable Snap to Grid'}>
+                <div className='flex flex-row items-center justify-center'>  
+                    <GrGrid />
+                </div>
+            </button>
             <button className='rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center' onClick={StateManager.downloadJSON} title="Download from JSON">
                 <BsDownload />
             </button>
