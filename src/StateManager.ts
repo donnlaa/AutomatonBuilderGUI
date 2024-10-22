@@ -1436,7 +1436,7 @@ export default class StateManager {
     /** Gets a runnable DFA object from the current automaton. */
     public static get dfa(): DFA {
         let outputDFA = new DFA();
-        const stateManagerData = StateManager.toJSON();
+        const stateManagerData = StateManager.toSerializable();
         outputDFA.inputAlphabet = stateManagerData.alphabet.map((s) => s.symbol);
         outputDFA.states = stateManagerData.states.map((s) => new DFAState(s.label));
         outputDFA.acceptStates = stateManagerData.acceptStates.map((s) => {
@@ -1465,15 +1465,15 @@ export default class StateManager {
     }
 
     /**
-     * Converts the current automaton into a JSON object that can be
-     * serialized. Note that this is *not* a JSON string.
-     * @returns 
+     * Converts the current automaton into an object that can be
+     * serialized.
+     * @returns {SerializableAutomaton} A serializable automaton object.
      */
-    public static toJSON() {
+    public static toSerializable(): SerializableAutomaton {
         return {
-            states: StateManager._nodeWrappers.map(node => node.toJSON()),
-            alphabet: StateManager._alphabet.map(tok => tok.toJSON()),
-            transitions: StateManager._transitionWrappers.map(trans => trans.toJSON()),
+            states: StateManager._nodeWrappers.map(node => node.toSerializable()),
+            alphabet: StateManager._alphabet.map(tok => tok.toSerializable()),
+            transitions: StateManager._transitionWrappers.map(trans => trans.toSerializable()),
             startState: StateManager._startNode != null ? StateManager._startNode.id : null,
             acceptStates: StateManager._nodeWrappers.filter(node => node.isAcceptNode).map(node => node.id)
         };
@@ -1484,7 +1484,7 @@ export default class StateManager {
      * user's device.
      */
     public static downloadJSON() {
-        const jsonString = JSON.stringify(StateManager.toJSON(), null, 4);
+        const jsonString = JSON.stringify(StateManager.toSerializable(), null, 4);
 
         // A hacky solution in my opinion, but apparently it works so hey.
         // Adapted from https://stackoverflow.com/a/18197341
@@ -1725,7 +1725,7 @@ interface SerializableAutomaton {
 /**
  * A representation of a node that can be converted to and from a JSON string.
  */
-interface SerializableState {
+export interface SerializableState {
     id: string,
     x: number,
     y: number,
@@ -1735,7 +1735,7 @@ interface SerializableState {
 /**
  * A representation of a token that can be converted to and from a JSON string.
  */
-interface SerializableToken {
+export interface SerializableToken {
     id: string,
     symbol: string
 }
@@ -1744,7 +1744,7 @@ interface SerializableToken {
  * A representation of a transition that can be converted to and from a JSON
  * string.
  */
-interface SerializableTransition {
+export interface SerializableTransition {
     id: string,
     source: string,
     dest: string,
