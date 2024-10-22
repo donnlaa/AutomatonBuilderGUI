@@ -1522,7 +1522,7 @@ export default class StateManager {
     public static loadAutomaton(json: SerializableAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
-        // TODO: Clear all current stuff
+        StateManager.clearMachine();
 
         // Load each state
         states.forEach(state => {
