@@ -13,6 +13,22 @@ interface ToolboxProps {
     setCurrentTool: React.Dispatch<React.SetStateAction<Tool>>
 }
 
+interface ActionButtonProps {
+    onClick: () => void
+    icon: JSX.Element
+    title: string
+    bgColor: string
+    margin?: string
+}
+
+function ActionButton({onClick, icon, title, bgColor, margin = 'm-1'}: ActionButtonProps) {
+    return (
+        <button className={`rounded-full p-2 ${margin} mx-2 block text-white text-center ${bgColor}`} onClick={onClick} title={title}>
+        <div className='flex flex-row items-center justify-center'>{icon}</div>
+        </button>
+    );
+}
+
 /**
  * Provides the UI interface with which the user can select a tool to use.
  * @param props
@@ -53,60 +69,24 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             </ToolButton>
             <div className='grow'></div>
             {/* Enable Snap to Grid Button */}
-            <button className={`rounded-full p-2 m-1 mx-2 block text-white text-center ${isSnapActive ? 'bg-fuchsia-800' : 'bg-fuchsia-500'}`} onClick={handleToggleSnap} title={isSnapActive ? 'Disable Snap to Grid' : 'Enable Snap to Grid'}>
-                <div className='flex flex-row items-center justify-center'>  
-                    <GrGrid />
-                </div>
-            </button>
-            <button className='rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center' onClick={StateManager.downloadJSON} title="Download from JSON">
-                <BsDownload />
-            </button>
+            <ActionButton onClick={handleToggleSnap} icon={<GrGrid />} title={isSnapActive ? 'Disable Snap to Grid' : 'Enable Snap to Grid'} bgColor={isSnapActive ? 'bg-fuchsia-800' : 'bg-fuchsia-500'} ></ActionButton>
+            <ActionButton onClick={StateManager.downloadJSON} icon={<BsDownload />} title="Download from JSON" bgColor="bg-amber-500"></ActionButton>
             <input type='file' id='file-uploader' ref={fileInputRef} style={{ display: 'none' }} onChange={StateManager.uploadJSON} />
-            <button className='rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center' onClick={handleLoadButtonClick} title="Load from JSON">
-                <BsUpload />
-            </button>
+            <ActionButton onClick={handleLoadButtonClick} icon={<BsUpload />} title="Load from JSON" bgColor="bg-amber-500"></ActionButton>
             {/* Reset Zoom Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.resetZoom} title="Reset Zoom">
-                <div className='flex flex-row items-center justify-center'>
-                    <TbZoomReset />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.resetZoom} icon={<TbZoomReset />} title="Reset Zoom" bgColor="bg-blue-500"></ActionButton>
             {/* Center Stage Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-green-500 text-white text-center' onClick={StateManager.centerStage} title="Center Stage">
-                <div className='flex flex-row items-center justify-center'>
-                    <BiReset />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.centerStage} icon={<BiReset />} title="Center Stage" bgColor="bg-green-500"></ActionButton>
             {/* Zoom In Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.zoomIn} title="Zoom In">
-                <div className='flex flex-row items-center justify-center'>
-                    <BsZoomIn />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.zoomIn} icon={<BsZoomIn />} title="Zoom In" bgColor="bg-blue-500"></ActionButton>
             {/* Zoom Out Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.zoomOut} title="Zoom Out">
-                <div className='flex flex-row items-center justify-center'>
-                    <BsZoomOut />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.zoomOut} icon={<BsZoomOut />} title="Zoom Out" bgColor="bg-blue-500"></ActionButton>
             {/* Clear Stage No Save Button */}
-            <button className='rounded-full p-2 m-10 mx-2 block bg-red-500 text-white text-center' onClick={StateManager.clearMachine} title="Clear the Automaton">
-                <div className='flex flex-row items-center justify-center'>
-                    <BiTrash />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.clearMachine} icon={<BiTrash />} title="Clear the Automaton" bgColor="bg-red-500" margin="m-10"></ActionButton>
             {/* Undo Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.undoState} title="Undo most recent action">
-                <div className='flex flex-row items-center justify-center'>
-                    <BsFillArrowLeftCircleFill />
-                </div>
-            </button>
+            <ActionButton onClick={StateManager.undoState} icon={<BsFillArrowLeftCircleFill />} title="Undo most recent action" bgColor="bg-blue-500"></ActionButton>
             {/* Redo Button */}
-            <button className='rounded-full p-2 m-1 mx-2 block bg-blue-500 text-white text-center' onClick={StateManager.redoState} title="Redo most recent action">
-                <div className='flex flex-row items-center justify-center'>
-                    <BsFillArrowRightCircleFill />
-                </div>
-            </button>                                    
+            <ActionButton onClick={StateManager.redoState} icon={<BsFillArrowRightCircleFill />} title="Redo most recent action" bgColor="bg-blue-500"></ActionButton>                               
         </div>
     );
 }
