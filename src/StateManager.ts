@@ -1466,8 +1466,8 @@ export default class StateManager {
 
     /**
      * Converts the current automaton into an object that can be
-     * serialized. Note that this is *not* a JSON string.
-     * @returns 
+     * serialized.
+     * @returns {SerializableAutomaton} A serializable automaton object.
      */
     public static toSerializable(): SerializableAutomaton {
         return {

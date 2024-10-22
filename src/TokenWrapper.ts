@@ -43,8 +43,7 @@ export default class TokenWrapper {
 
     /**
      * Converts this token wrapper into an object that can be serialized.
-     * @returns A object that can be serialized. Note that this
-     * is *not* a JSON string.
+     * @returns {SerializableToken} A serializable token object.
      */
     public toSerializable(): SerializableToken {
         return {

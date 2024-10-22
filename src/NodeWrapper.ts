@@ -75,8 +75,7 @@ export default class NodeWrapper extends SelectableObject {
 
   /**
    * Converts this node wrapper into an object that can be serialized.
-   * @returns {object} An object that can be serialized. Note that this is
-   * **not** a JSON string.
+   * @returns {SerializableState} A serializable state object.
    */
   public toSerializable(): SerializableState {
     return {

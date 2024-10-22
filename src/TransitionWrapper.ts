@@ -379,8 +379,7 @@ export default class TransitionWrapper extends SelectableObject {
 
     /**
      * Converts this transition wrapper into an object that can be serialized.
-     * @returns An object that can be serialized. Note that this
-     * is *not* a JSON string.
+     * @returns {SerializableTransition} The serializable transition object.
      */
     public toSerializable(): SerializableTransition {
         return {
