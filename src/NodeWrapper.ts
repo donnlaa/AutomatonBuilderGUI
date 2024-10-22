@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import StateManager from './StateManager';
+import StateManager, { SerializableState } from './StateManager';
 import { Tool } from './Tool';
 import { Vector2d } from 'konva/lib/types';
 import SelectableObject from './SelectableObject';
@@ -74,11 +74,10 @@ export default class NodeWrapper extends SelectableObject {
   }
 
   /**
-   * Converts this node wrapper into a JSON object that can be serialized.
-   * @returns {object} A JSON object that can be serialized. Note that this is
-   * **not** a JSON string.
+   * Converts this node wrapper into an object that can be serialized.
+   * @returns {SerializableState} A serializable state object.
    */
-  public toJSON() {
+  public toSerializable(): SerializableState {
     return {
       id: this.id,
       x: this.nodeGroup.x(),

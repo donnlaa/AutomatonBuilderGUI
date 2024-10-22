@@ -1,7 +1,7 @@
 import Konva from "konva";
 import NodeWrapper from "./NodeWrapper";
 import SelectableObject from "./SelectableObject";
-import StateManager from "./StateManager";
+import StateManager, { SerializableTransition } from './StateManager';
 import { Tool } from "./Tool";
 import TokenWrapper from "./TokenWrapper";
 import { v4 as uuidv4 } from 'uuid';
@@ -378,11 +378,10 @@ export default class TransitionWrapper extends SelectableObject {
     }
 
     /**
-     * Converts this transition wrapper into a JSON object that can be serialized.
-     * @returns A JSON object that can be serialized. Note that this
-     * is *not* a JSON string.
+     * Converts this transition wrapper into an object that can be serialized.
+     * @returns {SerializableTransition} The serializable transition object.
      */
-    public toJSON() {
+    public toSerializable(): SerializableTransition {
         return {
             id: this.id,
             source: this._sourceNode.id,
