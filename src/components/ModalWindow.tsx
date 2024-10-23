@@ -50,18 +50,16 @@ export function ClosableModalWindow(props: React.PropsWithChildren<ClosableModal
 export default function ModalWindow(props: React.PropsWithChildren) {
     return (
         <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className={`z-40 fixed inset-0 bg-gray-500/50 dark:bg-gray-950/70`}></div>
-                <div className={`fixed inset-0 z-50 w-screen overflow-y-auto`}>
-                    <div className={`flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0`}>
-                        <motion.div initial={{ y: -30 }} animate={{ y: 0 }} exit={{ y: -30 }}>
-                            <div className='relative transform overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 dark:text-white text-left shadow-xl sm:w-full sm:max-w-lg'>
-                                {props.children}
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
-            </motion.div>
+            <div className={`z-40 fixed inset-0 bg-gray-500/50 dark:bg-gray-950/70`}></div>
+            <div className={`fixed inset-0 z-50 w-screen overflow-y-auto`}>
+                <div className={`flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0`}>
+                    <motion.div initial={{ opacity: 0,  y: -30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }}>
+                        <div className='relative transform overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 dark:text-white text-left shadow-xl sm:w-full sm:max-w-lg'>
+                            {props.children}
+                        </div>
+                    </motion.div>
+                </div>            
+            </div>
         </>
     );
 }
