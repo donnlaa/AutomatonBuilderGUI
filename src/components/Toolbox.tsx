@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
 import { GrGrid } from "react-icons/gr";
-import { BiCake, BiReset, BiSave, BiTrash } from "react-icons/bi";
+import { BiCake, BiFileBlank, BiReset, BiSave, BiTrash } from "react-icons/bi";
 
 interface ToolboxProps {
     currentTool: Tool
@@ -82,7 +82,7 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Zoom Out Button */}
             <ActionButton onClick={StateManager.zoomOut} icon={<BsZoomOut />} title="Zoom Out" bgColor="bg-blue-500"></ActionButton>
             {/* Clear Stage No Save Button */}
-            <ActionButton onClick={StateManager.clearMachine} icon={<BiTrash />} title="Clear the Automaton" bgColor="bg-red-500" margin="m-10"></ActionButton>
+            <ActionButton onClick={StateManager.clearMachine} icon={<BiFileBlank />} title="New Automaton" bgColor="bg-black" margin="m-10"></ActionButton>
             {/* Undo Button */}
             <ActionButton onClick={StateManager.undoState} icon={<BsFillArrowLeftCircleFill />} title="Undo most recent action" bgColor="bg-blue-500"></ActionButton>
             {/* Redo Button */}
