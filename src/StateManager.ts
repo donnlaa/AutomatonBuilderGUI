@@ -1631,6 +1631,7 @@ export default class StateManager {
     public static completeDragStatesOperation(finalPos: Vector2d) {
         let startPos = this._dragStatesStartPosition;
         let endPos = finalPos;
+        console.log(startPos, endPos);
         let delta: Vector2d = { x: endPos.x - startPos.x, y: endPos.y - startPos.y };
 
         let moveStatesForward = (data: MoveStatesActionData) => {
