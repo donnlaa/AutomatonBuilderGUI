@@ -427,6 +427,7 @@ export default class NodeWrapper extends SelectableObject {
       // Redraw the layer to reflect the changes
       this.nodeGroup.getLayer()?.batchDraw();
 
+      StateManager.completeDragStatesOperation(this.nodeGroup.position());
     } else if (StateManager.currentTool === Tool.Transitions) {
       // Handling specific to ending a tentative transition
       StateManager.endTentativeTransition();
