@@ -41,6 +41,10 @@ export default function TestStringWindow() {
                     placeholder="Enter string to test"
                     value={testString}
                     onChange={handleChange}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {handleTestString();}
+                        //console.log('results were: '+ result);
+                      }}
                 />
                 <button
                     className="ml-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:bg-green-700"
