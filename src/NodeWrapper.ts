@@ -43,6 +43,9 @@ export default class NodeWrapper extends SelectableObject {
 
   private lastPos: Vector2d;
 
+  /** The previous grid aligned position. */
+  private lastSnappedPos: Vector2d = { x: 0, y: 0 };
+
   /**
    * Whether or not this node is an accepting node.
    * 
@@ -427,6 +430,12 @@ export default class NodeWrapper extends SelectableObject {
       // Redraw the layer to reflect the changes
       this.nodeGroup.getLayer()?.batchDraw();
 
+      // only add the move to the action stack if our snapped position changed
+      if (Math.abs(this.lastSnappedPos.x - snappedX) > 1e-5 || 
+          Math.abs(this.lastSnappedPos.y - snappedY) > 1e-5) {
+        this.lastSnappedPos = { x: snappedX, y: snappedY };
+        StateManager.completeDragStatesOperation(this.nodeGroup.position());
+      }
     } else if (StateManager.currentTool === Tool.Transitions) {
       // Handling specific to ending a tentative transition
       StateManager.endTentativeTransition();
