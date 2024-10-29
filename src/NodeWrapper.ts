@@ -43,6 +43,9 @@ export default class NodeWrapper extends SelectableObject {
 
   private lastPos: Vector2d;
 
+  /** The previous grid aligned position. */
+  private lastSnappedPos: Vector2d = { x: 0, y: 0 };
+
   /**
    * Whether or not this node is an accepting node.
    * 
@@ -329,7 +332,7 @@ export default class NodeWrapper extends SelectableObject {
    * @param ev 
    */
   public onDragStart(ev: Konva.KonvaEventObject<MouseEvent>) {
-    this.lastPos = this.nodeGroup.absolutePosition();
+    this.lastPos = this.nodeGroup.position();
 
     // No dragging when in state mode!
     if (StateManager.currentTool === Tool.States) {
@@ -364,7 +367,7 @@ export default class NodeWrapper extends SelectableObject {
    */
   public onDragMove(ev: Konva.KonvaEventObject<MouseEvent>) {
     if (StateManager.currentTool == Tool.Transitions) {
-      this.nodeGroup.absolutePosition(this.lastPos);
+      this.nodeGroup.position(this.lastPos);
       StateManager.updateTentativeTransitionHead(ev.evt.pageX, ev.evt.pageY);
     }
     else if (StateManager.currentTool === Tool.Select) {
@@ -374,9 +377,9 @@ export default class NodeWrapper extends SelectableObject {
       const allOtherSelected = StateManager.selectedObjects.filter((i) => i !== this);
       allOtherSelected.forEach((obj) => {
         if (obj instanceof NodeWrapper) {
-          obj.konvaObject().absolutePosition({
-            x: obj.konvaObject().absolutePosition().x + ev.evt.movementX,
-            y: obj.konvaObject().absolutePosition().y + ev.evt.movementY
+          obj.konvaObject().position({
+            x: obj.konvaObject().position().x + ev.evt.movementX,
+            y: obj.konvaObject().position().y + ev.evt.movementY
           });
           obj.konvaObject().fire('move', ev);
         }
@@ -427,6 +430,12 @@ export default class NodeWrapper extends SelectableObject {
       // Redraw the layer to reflect the changes
       this.nodeGroup.getLayer()?.batchDraw();
 
+      // only add the move to the action stack if our snapped position changed
+      if (Math.abs(this.lastSnappedPos.x - snappedX) > 1e-5 || 
+          Math.abs(this.lastSnappedPos.y - snappedY) > 1e-5) {
+        this.lastSnappedPos = { x: snappedX, y: snappedY };
+        StateManager.completeDragStatesOperation(this.nodeGroup.position());
+      }
     } else if (StateManager.currentTool === Tool.Transitions) {
       // Handling specific to ending a tentative transition
       StateManager.endTentativeTransition();
