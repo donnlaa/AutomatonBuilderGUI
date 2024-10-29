@@ -43,7 +43,6 @@ export default function TestStringWindow() {
                     onChange={handleChange}
                     onKeyDown={(event) => {
                         if (event.key === "Enter") {handleTestString();}
-                        //console.log('results were: '+ result);
                       }}
                 />
                 <button
