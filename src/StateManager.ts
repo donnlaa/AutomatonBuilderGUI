@@ -1504,6 +1504,7 @@ export default class StateManager {
      */
     public static uploadJSON(ev: ChangeEvent<HTMLInputElement>) {
         const file = ev.target.files.item(0);
+        ev.target.value = null;
 
         const fileText = file.text()
             .then(text => {
