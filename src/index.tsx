@@ -129,9 +129,11 @@ function App() {
                             setStartNode={setStartNode}
                         />
 
-                        <AnimatePresence>
-                            {errorBoxes}
-                        </AnimatePresence>
+                        <div className='max-h-96 overflow-y-auto'>
+                            <AnimatePresence>
+                                {errorBoxes}
+                            </AnimatePresence>
+                        </div>
 
 
                         {/* Example error message boxes commented out */}
