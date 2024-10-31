@@ -121,7 +121,7 @@ function App() {
         <div className={useDarkMode ? 'dark' : ''}>
             <NodeView />
             <div className='flex flex-row h-screen text-center'>
-                <div>
+                <div className='flex flex-col'>
                     <FloatingPanel heightPolicy='min' style={{ width: '300px' }}>
                         <DetailsBox
                             selection={selectedObjects}
@@ -195,7 +195,7 @@ function App() {
                         </div>
                     </FloatingPanel>
                 </div>
-                <div>
+                <div className='flex flex-col'>
                     <FloatingPanel heightPolicy='min' style={{ width: '250px' }}>
                         <DetailsBox_ActionStackViewer />
                     </FloatingPanel>
