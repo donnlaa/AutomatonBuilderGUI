@@ -121,85 +121,82 @@ function App() {
         <div className={useDarkMode ? 'dark' : ''}>
             <NodeView />
             <div className='flex flex-row h-screen text-center'>
-                <div className='flex flex-col'>
-                    <FloatingPanel heightPolicy='min' style={{ width: '300px' }}>
-                        <DetailsBox
-                            selection={selectedObjects}
-                            startNode={startNode}
-                            setStartNode={setStartNode}
-                        />
+                <FloatingPanel heightPolicy='min' style={{ width: '300px' }}>
+                    <DetailsBox
+                        selection={selectedObjects}
+                        startNode={startNode}
+                        setStartNode={setStartNode}
+                    />
 
-                        <div className='max-h-96 overflow-y-auto'>
-                            <AnimatePresence>
-                                {errorBoxes}
-                            </AnimatePresence>
-                        </div>
+                    <div className='max-h-96 overflow-y-auto'>
+                        <AnimatePresence>
+                            {errorBoxes}
+                        </AnimatePresence>
+                    </div>
 
 
-                        {/* Example error message boxes commented out */}
-                        {/*
-                        <InformationBox infoBoxType={InformationBoxType.Error}>
-                            State "q0" has multiple transitions for token "a"
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Error}>
-                            State "q0" has no transition for token "b"
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Error}>
-                            Transitions on empty string (ε) not allowed in DFA
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Error}>
-                            Alphabet needs at least one token
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Error}>
-                            Token "c" is repeated in alphabet
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Warning}>
-                            State "q3" is inaccessible
-                        </InformationBox>
-                        <InformationBox infoBoxType={InformationBoxType.Warning}>
-                            Accept state "q4" is inaccessible; automaton will always reject
-                        </InformationBox>
-                        */}
+                    {/* Example error message boxes commented out */}
+                    {/*
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        State "q0" has multiple transitions for token "a"
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        State "q0" has no transition for token "b"
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        Transitions on empty string (ε) not allowed in DFA
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        Alphabet needs at least one token
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Error}>
+                        Token "c" is repeated in alphabet
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Warning}>
+                        State "q3" is inaccessible
+                    </InformationBox>
+                    <InformationBox infoBoxType={InformationBoxType.Warning}>
+                        Accept state "q4" is inaccessible; automaton will always reject
+                    </InformationBox>
+                    */}
 
-                        <TestStringWindow />
-                        {!isLabelUnique && (
-                            <InformationBox infoBoxType={InformationBoxType.Error}>
-                                Duplicate state labels detected. Each state must have a unique label.
-                            </InformationBox>
-                        )}
-                        {emptyStringToken && (
-                            <InformationBox infoBoxType={InformationBoxType.Error}>
-                                Invalid token: Empty string detected.
-                            </InformationBox>
-                        )}
+                    <TestStringWindow />
+                    {!isLabelUnique && (
+                        <InformationBox infoBoxType={InformationBoxType.Error}>
+                            Duplicate state labels detected. Each state must have a unique label.
+                        </InformationBox>
+                    )}
+                    {emptyStringToken && (
+                        <InformationBox infoBoxType={InformationBoxType.Error}>
+                            Invalid token: Empty string detected.
+                        </InformationBox>
+                    )}
 
-                        <div className="flex flex-col items-center mt-4">
-                            <button
-                                className="rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center"
-                                onClick={openConfigWindow}
-                            >
-                                <div className='flex flex-row items-center place-content-center mx-2'>
-                                    <BsGearFill className='mr-1' />
-                                    Configure Automaton
-                                </div>
-                            </button>
-                            <button
-                                className="rounded-full p-2 m-1 mx-2 block bg-gray-500 text-white text-center"
-                                onClick={toggleDarkMode}
-                            >
-                                <div className='flex flex-row items-center place-content-center mx-2'>
-                                    <BsMoonFill className='mr-1' />
-                                    Dark Mode
-                                </div>
-                            </button>
-                        </div>
-                    </FloatingPanel>
-                </div>
-                <div className='flex flex-col'>
-                    <FloatingPanel heightPolicy='min' style={{ width: '250px' }}>
-                        <DetailsBox_ActionStackViewer />
-                    </FloatingPanel>
-                </div>
+                    <div className="flex flex-col items-center mt-4">
+                        <button
+                            className="rounded-full p-2 m-1 mx-2 block bg-amber-500 text-white text-center"
+                            onClick={openConfigWindow}
+                        >
+                            <div className='flex flex-row items-center place-content-center mx-2'>
+                                <BsGearFill className='mr-1' />
+                                Configure Automaton
+                            </div>
+                        </button>
+                        <button
+                            className="rounded-full p-2 m-1 mx-2 block bg-gray-500 text-white text-center"
+                            onClick={toggleDarkMode}
+                        >
+                            <div className='flex flex-row items-center place-content-center mx-2'>
+                                <BsMoonFill className='mr-1' />
+                                Dark Mode
+                            </div>
+                        </button>
+                    </div>
+                </FloatingPanel>
+
+                <FloatingPanel heightPolicy='min' style={{ width: '250px' }}>
+                    <DetailsBox_ActionStackViewer />
+                </FloatingPanel>
 
                 <FloatingPanel heightPolicy='min'>
                     <Toolbox currentTool={currentTool} setCurrentTool={setCurrentTool} />
