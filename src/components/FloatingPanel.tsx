@@ -18,7 +18,7 @@ export default function FloatingPanel(props: React.PropsWithChildren<FloatingPan
 
     return (
         <div className='flex flex-col'>
-            <div className={`z-10 bg-gray-300/50 dark:bg-gray-300/50 dark:text-white w-fit h-${props.heightPolicy} max-h-screen p-2 m-5 rounded-lg backdrop-blur-xl shadow-xl overflow-y-auto`} style={props.style}>
+            <div className={`z-10 bg-gray-300/50 dark:bg-gray-300/50 dark:text-white w-fit h-${props.heightPolicy} p-2 m-5 rounded-lg backdrop-blur-xl shadow-xl overflow-y-auto`} style={props.style}>
                 {props.children}
             </div>
         </div>
