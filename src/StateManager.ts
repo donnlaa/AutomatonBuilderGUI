@@ -1227,33 +1227,96 @@ export default class StateManager {
      * undo/redo safe manner.
      */
     public static deleteAllSelectedObjects() {
-        let selectedNodes = new Set<NodeWrapper>(StateManager._selectedObjects.filter(i => i instanceof NodeWrapper).map(i => i as NodeWrapper));
-        let selectedTransitions = new Set<TransitionWrapper>(StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper).map(i => i as TransitionWrapper));
+        if (this._selectedObjects.length === 0) {
+            return;
+        }
 
-        // Find the transitions we have selected that are already going to be deleted
-        // by a node deletion operation
-        let extraTransitions = new Set<TransitionWrapper>();
-        selectedTransitions.forEach((transition) => {
-            if (selectedNodes.has(transition.sourceNode) || selectedNodes.has(transition.destNode)) {
-                extraTransitions.add(transition);
-            }
-        });
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+        const prevStartNode = StateManager.startNode;
 
-        // Remove the transitions that were already going to be deleted,
-        // so we don't delete them twice
-        extraTransitions.forEach((transition) => {
-            selectedTransitions.delete(transition);
-        });
+        // Find transitions between selected nodes
+        const transitionsInvolvingSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) || selectedNodes.includes(transition.destNode)
+        );
 
-        // Remove all states
-        selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
+        // Copy selected transitions
+        const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
 
-        // Remove all transitions (that aren't connected to selected states)
-        selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
 
-        // Empty selection
-        StateManager.setSelectedObjects([]);
-        StateManager._selectedObjects = [];
+        // Create an action to remove the selected objects
+        let removeData = new RemoveNodeActionDataMulti();
+        
+
+        removeData.nodes = selectedNodes;
+        removeData.transitions = [...selectedTransitions, ...transitionsInvolvingSelectedNodes];
+
+        // Save start node if it's being removed
+        removeData.wasStartNode = removeData.nodes.includes(StateManager.startNode);
+
+        let totalObjects = removeData.nodes.length + removeData.transitions.length;
+        let actionDescription = `Deleted ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
+
+        let performRemoveForward = (data: RemoveNodeActionDataMulti) => {
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // Reset start node if necessary
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+        };
+
+        let performRemoveBackward = (data: RemoveNodeActionDataMulti) => {
+            // Add nodes back
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers.push(node);
+                StateManager._nodeLayer.add(node.nodeGroup);
+
+                // Restore start node if necessary
+                if (data.wasStartNode && StateManager.startNode == null && node===prevStartNode) {
+                    StateManager.startNode = node;
+                }
+            });
+            // Add transitions back
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let removeAction = new Action(
+            "deleteObjects",
+            actionDescription,
+            performRemoveForward,
+            performRemoveBackward,
+            removeData
+        );
+
+        UndoRedoManager.pushAction(removeAction);
+
+        StateManager.deselectAllObjects();
     }
 
     /**
@@ -1781,6 +1844,18 @@ class RemoveNodeActionData extends ActionData {
      * start node.
      */
     public isStart: boolean;
+}
+
+/** Holds the data associated with a delete all selected objects action. */
+class RemoveNodeActionDataMulti extends ActionData {
+  /** The nodes removed in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions removed in this action. */
+  public transitions: TransitionWrapper[] = [];
+
+  /** Whether any of the nodes removed were the start node. */
+  public wasStartNode: boolean = false;
 }
 
 /** Holds the data associated with a "move nodes" action. */
