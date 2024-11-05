@@ -1249,7 +1249,23 @@ export default class StateManager {
         selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
 
         // Remove all transitions (that aren't connected to selected states)
-        selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
+        selectedTransitions.forEach(trans => {
+            StateManager.removeTransition(trans as TransitionWrapper);
+
+            var sourceNode = trans.sourceNode;
+            var destNode = trans.destNode;
+
+            var remainingTransition = StateManager.transitions.find(t =>
+                (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
+                (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id)
+            );
+
+            if (remainingTransition) {
+                remainingTransition.priority = "default";
+                remainingTransition.updatePoints();                
+            }
+
+        });
 
         // Empty selection
         StateManager.setSelectedObjects([]);
