@@ -405,35 +405,23 @@ export default class NodeWrapper extends SelectableObject {
     }
     else if (StateManager.currentTool === Tool.Select && StateManager.snapToGridEnabled) {
 
-      // Get the node's current position relative to the stage
-      const nodePos = this.nodeGroup.position();
+      let selected = StateManager.selectedObjects;
+      let nodes = selected.filter(obj => obj instanceof NodeWrapper);
 
-      // Snap the position to the nearest grid points
-      const gridCellSize = 50;
-      let snappedX = Math.round(nodePos.x / gridCellSize) * gridCellSize;
-      let snappedY = Math.round(nodePos.y / gridCellSize) * gridCellSize;
+      let snappedPos: Vector2d = { x: 0, y: 0 };
 
-      // Adjust the snapped position by the scale to get the final position on the stage
-      this.setPosition({
-        x: snappedX,
-        y: snappedY
+      nodes.forEach(node => {
+        let snapped = (node as NodeWrapper).snapToGrid();
+        if (node === this)
+          snappedPos = snapped;
       });
 
       StateManager.updateStartNodePosition();
 
-      // update all related transitions
-      StateManager.transitions.forEach(transition => {
-        if (transition.involvesNode(this)) {
-          transition.updatePoints();
-        }
-      });
-      // Redraw the layer to reflect the changes
-      this.nodeGroup.getLayer()?.batchDraw();
-
       // only add the move to the action stack if our snapped position changed
-      if (Math.abs(this.lastSnappedPos.x - snappedX) > 1e-5 || 
-          Math.abs(this.lastSnappedPos.y - snappedY) > 1e-5) {
-        this.lastSnappedPos = { x: snappedX, y: snappedY };
+      if (Math.abs(this.lastSnappedPos.x - snappedPos.x) > 1e-5 || 
+          Math.abs(this.lastSnappedPos.y - snappedPos.y) > 1e-5) {
+        this.lastSnappedPos = snappedPos;
         StateManager.completeDragStatesOperation(this.nodeGroup.position());
       }
     } else if (StateManager.currentTool === Tool.Transitions) {
@@ -451,6 +439,37 @@ export default class NodeWrapper extends SelectableObject {
     }
   }
 
+  /**
+   * Snaps the position of this node to the nearest grid point.
+   * @returns {Vector2d} The new snapped position of the node.
+   */
+  public snapToGrid(): Vector2d {
+    // Get the node's current position relative to the stage
+    const nodePos = this.nodeGroup.position();
+
+    // Snap the position to the nearest grid points
+    const gridCellSize = 50;
+    let snappedX = Math.round(nodePos.x / gridCellSize) * gridCellSize;
+    let snappedY = Math.round(nodePos.y / gridCellSize) * gridCellSize;
+
+    // Adjust the snapped position by the scale to get the final position on the stage
+    this.setPosition({
+      x: snappedX,
+      y: snappedY
+    });
+
+    // update all related transitions
+    StateManager.transitions.forEach(transition => {
+      if (transition.involvesNode(this)) {
+        transition.updatePoints();
+      }
+    });
+
+    // Redraw the layer to reflect the changes
+    this.nodeGroup.getLayer()?.batchDraw();
+
+    return { x: snappedX, y:snappedY };
+  }
 
   /**
    * Returns the Konva group that visualizes this node.
