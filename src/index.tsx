@@ -15,6 +15,8 @@ import InformationBox, { InformationBoxType } from './components/InformationBox'
 import { } from './components/TestStringWindow';
 import DetailsBox_ActionStackViewer from './components/DetailsBox/DetailsBox_ActionStackViewer';
 import { motion, AnimatePresence } from 'framer-motion';
+import AutomatonElementError from '../node_modules/automaton-kit/lib/errors/AutomatonElementError';
+import NodeWrapper from './NodeWrapper';
 
 function App() {
     const [currentTool, setCurrentTool] = useState(Tool.States);
@@ -78,6 +80,38 @@ function App() {
         StateManager.setNodeIsStart(startNode);
     }, [startNode]);
 
+
+    useEffect(() => {
+        const dfa = StateManager.dfa;
+        if (dfa) {
+          const errors = dfa.getErrors();
+          const errorNodes = new Set<NodeWrapper>();
+    
+          errors.forEach((error) => {
+            if (error instanceof AutomatonElementError) {
+              const element = error.getElement();
+              if (element.label) {
+                const stateLabel = element.label;
+                const node = StateManager.nodeWrappers.find(
+                  (node) => node.labelText === stateLabel
+                );
+                if (node) {
+                  node.setErrorState(true);
+                  errorNodes.add(node);
+                }
+              }
+            }
+          });
+    
+          // Reset nodes that are not in error
+          StateManager.nodeWrappers.forEach((node) => {
+            if (!errorNodes.has(node)) {
+              node.setErrorState(false);
+            }
+          });
+        }
+      }, [StateManager.nodeWrappers, StateManager.dfa]);
+      
     // Check if there is a token with an empty symbol/label.
     const emptyStringToken = StateManager.alphabet.some(token => token.symbol.trim() === '');
 
