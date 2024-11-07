@@ -80,15 +80,18 @@ function App() {
         StateManager.setNodeIsStart(startNode);
     }, [startNode]);
 
-
+    // When an error is detected in the DFA, highlight the associated nodes
     useEffect(() => {
         const dfa = StateManager.dfa;
         if (dfa) {
+          // Get the list of errors from the DFA  
           const errors = dfa.getErrors();
+          // Create a set to keep track of nodes that have errors
           const errorNodes = new Set<NodeWrapper>();
     
           errors.forEach((error) => {
             if (error instanceof AutomatonElementError) {
+              // Using getElement() method to retrieve the automaton element associated with the error  
               const element = error.getElement();
               if (element.label) {
                 const stateLabel = element.label;
