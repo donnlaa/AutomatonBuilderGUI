@@ -29,6 +29,10 @@ export default class NodeWrapper extends SelectableObject {
   /** The Konva object used to draw the node circle. */
   private nodeBackground: Konva.Circle;
 
+
+  private _isErrorState: boolean = false;
+  private _isSelected: boolean = false;
+
   /**
    * The Konva object used to draw the small inner circle on the node,
    * indicating that it is an accept state.
@@ -217,8 +221,10 @@ export default class NodeWrapper extends SelectableObject {
    * node has a blue outline).
    */
   public select() {
-    this.nodeBackground.stroke(StateManager.colorScheme.selectedNodeStrokeColor);
-    this.nodeBackground.strokeWidth(NodeWrapper.SelectedStrokeWidth);
+    //this.nodeBackground.stroke(StateManager.colorScheme.selectedNodeStrokeColor);
+    //his.nodeBackground.strokeWidth(NodeWrapper.SelectedStrokeWidth);
+    this._isSelected = true;
+    this.updateAppearance();
   }
 
   /**
@@ -226,8 +232,10 @@ export default class NodeWrapper extends SelectableObject {
    * the node has a black outline).
    */
   public deselect() {
-    this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
-    this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
+    //this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
+    //this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
+    this._isSelected = false;
+    this.updateAppearance();
   }
 
   /**
@@ -473,6 +481,80 @@ export default class NodeWrapper extends SelectableObject {
     this.nodeLabel.fill(StateManager.colorScheme.nodeLabelColor);
   }
 
+  public setErrorState(isError: boolean) {
+    this._isErrorState = isError;
+    this.updateAppearance();
+}
+
+private updateAppearance() {
+  // Remove existing error elements (if they exist) to avoid duplicates
+  this.nodeGroup.find('.errorIcon, .errorText').forEach((el) => el.destroy());
+
+  if (this._isErrorState) {
+      // Error state appearance
+      this.nodeBackground.fill('rgb(254, 226, 225)'); // Light red
+      this.nodeBackground.stroke('rgb(220, 38, 37)'); // Dark red
+      this.nodeBackground.strokeWidth(4);
+
+      // Create an "X" icon
+      const errorIcon = new Konva.Circle({
+          x: 0,
+          y: NodeWrapper.NodeRadius - 1,
+          radius: 10,
+          fill: 'rgb(220, 38, 37)',
+          name: 'errorIcon', // Add a name for easy removal
+      });
+
+      const errorText = new Konva.Text({
+          text: '✕',
+          fontSize: 14,
+          fill: 'white',
+          align: 'center',
+          verticalAlign: 'middle',
+          width: 20,
+          height: 20,
+          name: 'errorText', // Add a name for easy removal
+      });
+
+      // Center the text inside the circle
+      errorText.offsetX(errorText.width() / 2);
+      errorText.offsetY(errorText.height() / 2);
+
+      // Position the text directly over the errorIcon
+      errorText.position({
+          x: 0,
+          y: NodeWrapper.NodeRadius - 1,
+      });
+
+      // Add the icon and text to the node group
+      this.nodeGroup.add(errorIcon);
+      this.nodeGroup.add(errorText);
+
+  } else if (this._isSelected) {
+      // Selected state appearance
+      this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
+      this.nodeBackground.stroke(StateManager.colorScheme.selectedNodeStrokeColor);
+      this.nodeBackground.strokeWidth(NodeWrapper.SelectedStrokeWidth);
+
+  } else {
+      // Default appearance
+      this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
+      this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
+      this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
+  }
+
+  // Update accept circle visibility and color
+  this.nodeAcceptCircle.stroke(StateManager.colorScheme.nodeAcceptStrokeColor);
+  this.nodeAcceptCircle.visible(this._isAcceptNode);
+
+  // Update label color
+  this.nodeLabel.fill(StateManager.colorScheme.nodeLabelColor);
+
+  // Redraw the layer to apply changes
+  this.nodeGroup.getLayer()?.batchDraw();
+}
+
+/*
 //UI of error node
 public setErrorState(isError: boolean) {
   // Remove existing error elements (if they exist) to avoid duplicates
@@ -528,6 +610,7 @@ public setErrorState(isError: boolean) {
 
   // Redraw the layer to apply changes
   this.nodeGroup.getLayer()?.batchDraw();
-}
+  
+}*/
 
 }
