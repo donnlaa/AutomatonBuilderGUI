@@ -216,24 +216,18 @@ export default class NodeWrapper extends SelectableObject {
     }
   }
 
-  /**
-   * Updates the appearance of the node to be selected (i.e., in light mode, the
-   * node has a blue outline).
-   */
+  
+  /** Marks the node as selected and updates its appearance accordingly. */
   public select() {
-    //this.nodeBackground.stroke(StateManager.colorScheme.selectedNodeStrokeColor);
-    //his.nodeBackground.strokeWidth(NodeWrapper.SelectedStrokeWidth);
     this._isSelected = true;
     this.updateAppearance();
   }
 
+
   /**
-   * Updates the appearance of the node to be unselected (i.e., in light mode,
-   * the node has a black outline).
+  * Marks the node as deselected and updates its appearance accordingly.
    */
   public deselect() {
-    //this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
-    //this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
     this._isSelected = false;
     this.updateAppearance();
   }
@@ -486,6 +480,7 @@ export default class NodeWrapper extends SelectableObject {
     this.updateAppearance();
 }
 
+
 private updateAppearance() {
   // Remove existing error elements (if they exist) to avoid duplicates
   this.nodeGroup.find('.errorIcon, .errorText').forEach((el) => el.destroy());
@@ -496,13 +491,13 @@ private updateAppearance() {
       this.nodeBackground.stroke('rgb(220, 38, 37)'); // Dark red
       this.nodeBackground.strokeWidth(4);
 
-      // Create an "X" icon
+      // an "X" icon
       const errorIcon = new Konva.Circle({
           x: 0,
           y: NodeWrapper.NodeRadius - 1,
           radius: 10,
           fill: 'rgb(220, 38, 37)',
-          name: 'errorIcon', // Add a name for easy removal
+          name: 'errorIcon', 
       });
 
       const errorText = new Konva.Text({
@@ -513,31 +508,36 @@ private updateAppearance() {
           verticalAlign: 'middle',
           width: 20,
           height: 20,
-          name: 'errorText', // Add a name for easy removal
+          name: 'errorText', 
       });
 
-      // Center the text inside the circle
       errorText.offsetX(errorText.width() / 2);
       errorText.offsetY(errorText.height() / 2);
 
-      // Position the text directly over the errorIcon
       errorText.position({
           x: 0,
           y: NodeWrapper.NodeRadius - 1,
       });
 
-      // Add the icon and text to the node group
       this.nodeGroup.add(errorIcon);
       this.nodeGroup.add(errorText);
 
   } else if (this._isSelected) {
       // Selected state appearance
+      /**
+        * Updates the appearance of the node to be selected (i.e., in light mode, the
+        * node has a blue outline).
+      */
       this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
       this.nodeBackground.stroke(StateManager.colorScheme.selectedNodeStrokeColor);
       this.nodeBackground.strokeWidth(NodeWrapper.SelectedStrokeWidth);
 
   } else {
       // Default appearance
+      /**
+       * Updates the appearance of the node to be unselected (i.e., in light mode,
+       * the node has a black outline).
+      */
       this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
       this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
       this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
@@ -554,63 +554,6 @@ private updateAppearance() {
   this.nodeGroup.getLayer()?.batchDraw();
 }
 
-/*
-//UI of error node
-public setErrorState(isError: boolean) {
-  // Remove existing error elements (if they exist) to avoid duplicates
-  this.nodeGroup.find('.errorIcon, .errorText').forEach((el) => el.destroy());
 
-  if (isError) {
-      // Set a light red fill color for the node background
-      this.nodeBackground.fill('rgb(254, 226, 225)'); // Light red
-
-      // Set the border color and width for emphasis
-      this.nodeBackground.stroke('rgb(220, 38, 37)'); //Dark red
-      this.nodeBackground.strokeWidth(4);
-
-      // Create an "X" icon 
-      const errorIcon = new Konva.Circle({
-          x: 0,
-          y: NodeWrapper.NodeRadius - 1, 
-          radius: 10,
-          fill: 'rgb(220, 38, 37)',
-          name: 'errorIcon', // Add a name for easy removal
-      });
-
-      const errorText = new Konva.Text({
-          text: '✕',
-          fontSize: 14, 
-          fill: 'white',
-          align: 'center',
-          verticalAlign: 'middle',
-          width: 20, 
-          height: 20, 
-          name: 'errorText', // Add a name for easy removal
-      });
-
-      // Center the text inside the circle
-      errorText.offsetX(errorText.width() / 2);
-      errorText.offsetY(errorText.height() / 2);
-
-      // Position the text directly over the errorIcon
-      errorText.position({
-          x: 0,
-          y: NodeWrapper.NodeRadius - 1,
-      });
-
-      // Add the icon and text to the node group
-      this.nodeGroup.add(errorIcon);
-      this.nodeGroup.add(errorText);
-  } else {
-      // Reset the fill color to the default
-      this.nodeBackground.fill(StateManager.colorScheme.nodeFill);
-      this.nodeBackground.stroke(StateManager.colorScheme.nodeStrokeColor);
-      this.nodeBackground.strokeWidth(NodeWrapper.StrokeWidth);
-  }
-
-  // Redraw the layer to apply changes
-  this.nodeGroup.getLayer()?.batchDraw();
-  
-}*/
 
 }
