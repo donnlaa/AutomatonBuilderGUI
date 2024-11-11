@@ -1268,9 +1268,12 @@ export default class StateManager {
     
                 var remainingTransition = StateManager.transitions.find(t =>
                     (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
-                    (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id)
+                    (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id) &&
+                    // we don't want to change the state of a node thats going to be deleted
+                    (!data.transitions.includes(t))
                 );
-    
+
+                //stop curving if remaining adjacent transition exists
                 if (remainingTransition) {
                     remainingTransition.priority = "default";
                     remainingTransition.updatePoints();                
@@ -1311,6 +1314,20 @@ export default class StateManager {
             });
             // Add transitions back
             data.transitions.forEach((transition) => {
+                var sourceNode = transition.sourceNode;
+                var destNode = transition.destNode;
+    
+                var adjacentTransitionInScene = StateManager.transitions.find(t =>
+                    (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
+                    (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id)
+                );
+
+                // set curve back if adjacent node exists
+                if (adjacentTransitionInScene) {
+                    adjacentTransitionInScene.priority = "curve";
+                    adjacentTransitionInScene.updatePoints();                
+                }
+
                 StateManager._transitionWrappers.push(transition);
                 StateManager._transitionLayer.add(transition.konvaGroup);
             });
