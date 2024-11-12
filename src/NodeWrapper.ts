@@ -41,7 +41,11 @@ export default class NodeWrapper extends SelectableObject {
   /** The group of Konva objects related to this node. */
   public nodeGroup: Konva.Group;
 
+  /** The last position of the node before being dragged */
   private lastPos: Vector2d;
+
+  /** The previous drag position of the node */
+  private lastDragPos: Vector2d = { x: 0, y: 0 };
 
   /** The previous grid aligned position. */
   private lastSnappedPos: Vector2d = { x: 0, y: 0 };
@@ -333,6 +337,7 @@ export default class NodeWrapper extends SelectableObject {
    */
   public onDragStart(ev: Konva.KonvaEventObject<MouseEvent>) {
     this.lastPos = this.nodeGroup.position();
+    this.lastDragPos = this.nodeGroup.position();
 
     // No dragging when in state mode!
     if (StateManager.currentTool === Tool.States) {
@@ -372,14 +377,18 @@ export default class NodeWrapper extends SelectableObject {
     }
     else if (StateManager.currentTool === Tool.Select) {
       this.konvaObject().fire('move', ev);
-
+      let delta = {
+        x: this.konvaObject().x() - this.lastDragPos.x,
+        y: this.konvaObject().y() - this.lastDragPos.y,
+      };
+      this.lastDragPos = this.konvaObject().position();
       // Move all selected objects along with this one!
       const allOtherSelected = StateManager.selectedObjects.filter((i) => i !== this);
       allOtherSelected.forEach((obj) => {
         if (obj instanceof NodeWrapper) {
-          obj.konvaObject().position({
-            x: obj.konvaObject().position().x + ev.evt.movementX,
-            y: obj.konvaObject().position().y + ev.evt.movementY
+          obj.konvaObject().move({
+            x: delta.x,
+            y: delta.y
           });
           obj.konvaObject().fire('move', ev);
         }
