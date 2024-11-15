@@ -23,9 +23,6 @@ export default class NodeWrapper extends SelectableObject {
   /** The Konva object used to draw the node circle. */
   private nodeBackground: Konva.Circle;
 
-  /** The Konva object used to draw the error stroke around the node. */
-  private nodeErrorCircle: Konva.Circle;
-
   /**
    * The Konva object used to draw the small inner circle on the node,
    * indicating that it is an accept state.
@@ -532,9 +529,6 @@ export default class NodeWrapper extends SelectableObject {
     // Updating error icon colors
     this.errorIcon.fill(StateManager.colorScheme.errorIconFillColor);
     this.errorText.fill(StateManager.colorScheme.errorIconTextColor);
-
-    // Update error circle stroke color
-    this.nodeErrorCircle.stroke(StateManager.colorScheme.errorNodeStrokeColor);
 
     this.updateAppearance();
   }
