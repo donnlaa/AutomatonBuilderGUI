@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
 import { GrGrid } from "react-icons/gr";
-import { BiCake, BiReset, BiSave, BiTrash } from "react-icons/bi";
+import { FaRegImage } from "react-icons/fa6";
+import {  BiReset, BiTrash } from "react-icons/bi";
 
 interface ToolboxProps {
     currentTool: Tool
@@ -86,7 +87,9 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Undo Button */}
             <ActionButton onClick={StateManager.undoState} icon={<BsFillArrowLeftCircleFill />} title="Undo most recent action" bgColor="bg-blue-500"></ActionButton>
             {/* Redo Button */}
-            <ActionButton onClick={StateManager.redoState} icon={<BsFillArrowRightCircleFill />} title="Redo most recent action" bgColor="bg-blue-500"></ActionButton>                               
+            <ActionButton onClick={StateManager.redoState} icon={<BsFillArrowRightCircleFill />} title="Redo most recent action" bgColor="bg-blue-500"></ActionButton>
+            {/* Export Button */}
+            <ActionButton onClick={StateManager.exportAutomatonToImage} icon={<FaRegImage />} title="Export Automaton to PNG" bgColor="bg-teal-500" margin="m-10"/>
         </div>
     );
 }

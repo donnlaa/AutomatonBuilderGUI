@@ -270,10 +270,113 @@ export default class StateManager {
                 listening: false,
             }));
         }
-
         // Draw the grid
         StateManager._gridLayer.batchDraw();
     }
+
+
+    //diagram bounds to know which exact part of the canvas to export
+    private static getDiagramBounds() {
+        if (!StateManager._nodeWrappers.length && !StateManager._transitionWrappers.length) {
+            return { x: 0, y: 0, width: 0, height: 0 };
+        }
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        StateManager._nodeWrappers.forEach((node) => {
+            const { x, y } = node.nodeGroup.position();
+            const radius = NodeWrapper.NodeRadius;
+            minX = Math.min(minX, x - radius);
+            minY = Math.min(minY, y - radius);
+            maxX = Math.max(maxX, x + radius);
+            maxY = Math.max(maxY, y + radius);
+        });
+
+        StateManager._transitionWrappers.forEach((transition) => {
+            const sourcePos = transition.sourceNode.nodeGroup.position();
+            const destPos = transition.destNode.nodeGroup.position();
+            minX = Math.min(minX, sourcePos.x, destPos.x);
+            minY = Math.min(minY, sourcePos.y, destPos.y);
+            maxX = Math.max(maxX, sourcePos.x, destPos.x);
+            maxY = Math.max(maxY, sourcePos.y, destPos.y);
+        });
+
+        const padding = 150;
+        minX -= padding;
+        minY -= padding;
+        maxX += padding;
+        maxY += padding;
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
+    }
+
+
+    public static exportAutomatonToImage() {
+        if (!StateManager._stage) {
+            console.error("error: _stage is not initialized");
+            return;
+        }
+        const originalScale = StateManager._stage.scale();
+        const originalPosition = StateManager._stage.position();
+
+        StateManager._stage.scale({ x: 1, y: 1 });
+        StateManager._stage.position({ x: 0, y: 0 });
+        StateManager._stage.batchDraw();
+
+        StateManager.transitions.forEach((transition) => {
+            transition.updatePoints();
+            if (!transition.konvaGroup.getParent()) {
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            }
+        });
+
+        StateManager._gridLayer.batchDraw();
+        StateManager._nodeLayer.batchDraw();
+        StateManager._transitionLayer.batchDraw();
+
+        const bounds = StateManager.getDiagramBounds();
+
+        //add temporary white background
+        const background = new Konva.Rect({
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+            fill: 'white',
+            listening: false,
+        });
+        StateManager._gridLayer.add(background);
+        StateManager._gridLayer.moveToBottom();
+        StateManager._gridLayer.batchDraw();
+
+        const dataURL = StateManager._stage.toDataURL({
+            mimeType: "image/png",
+            pixelRatio: 2,
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+        });
+
+        background.destroy();
+        StateManager._gridLayer.batchDraw();
+
+        StateManager._stage.scale(originalScale);
+        StateManager._stage.position(originalPosition);
+        StateManager._stage.batchDraw();
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = dataURL;
+        downloadLink.download = "diagram.png";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+
 
     /** Gets the current tool. */
     public static get currentTool() {
