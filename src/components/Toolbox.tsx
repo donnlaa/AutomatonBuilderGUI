@@ -110,7 +110,7 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Redo Button */}
             <ActionButton onClick={StateManager.redoState} icon={<BsFillArrowRightCircleFill />} title="Redo most recent action" bgColor="bg-blue-500"></ActionButton>                               
         </div>
-        {/*
+        {/*  This does not work as intended. It will clear the screen as it should but the animations and closable window are broken and causes lag.
             <AnimatePresence>
             {isDialogVisible&&(
                 <motion.div>
