@@ -291,15 +291,6 @@ export default class StateManager {
             maxY = Math.max(maxY, y + radius);
         });
 
-        StateManager._transitionWrappers.forEach((transition) => {
-            const sourcePos = transition.sourceNode.nodeGroup.position();
-            const destPos = transition.destNode.nodeGroup.position();
-            minX = Math.min(minX, sourcePos.x, destPos.x);
-            minY = Math.min(minY, sourcePos.y, destPos.y);
-            maxX = Math.max(maxX, sourcePos.x, destPos.x);
-            maxY = Math.max(maxY, sourcePos.y, destPos.y);
-        });
-
         const padding = 150;
         minX -= padding;
         minY -= padding;
