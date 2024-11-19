@@ -40,7 +40,7 @@ export default function DetailsBox(props: DetailsBoxProps) {
   });
 
   return (
-    <div className="details-box flex flex-col h-full">
+    <div className="details-box flex flex-col h-min">
       <div className="flex-1 overflow-auto">
         {selectionElements.length > 0 ? selectionElements : <DetailsBox_NoSelection />}
       </div>

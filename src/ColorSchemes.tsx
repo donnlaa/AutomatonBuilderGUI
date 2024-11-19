@@ -25,6 +25,11 @@ export const LightColorScheme = {
     transitionLabelColor: 'black',
 
     gridColor: "lightgrey",
+
+    errorNodeFillColor: 'rgb(254, 226, 225)', // Light red
+    errorNodeStrokeColor: 'rgb(220, 38, 37)', // Dark red
+    errorIconFillColor: 'rgb(220, 38, 37)',   // Dark red
+    errorIconTextColor: 'white',
 };
 
 /**
@@ -54,6 +59,11 @@ export const DarkColorScheme = {
     transitionLabelColor: 'white',
 
     gridColor: "#303030",
+    
+    errorNodeFillColor: '#4f0203',           
+    errorNodeStrokeColor: 'red',
+    errorIconFillColor: 'red',
+    errorIconTextColor: 'white',
 };
 
 /**
@@ -83,4 +93,9 @@ export interface ColorScheme {
     transitionLabelColor: string,
 
     gridColor: string,
+
+    errorNodeFillColor: string,
+    errorNodeStrokeColor: string,
+    errorIconFillColor: string,
+    errorIconTextColor: string,
 }
