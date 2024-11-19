@@ -9,6 +9,9 @@ import { GrGrid } from "react-icons/gr";
 import ConfirmationDialog from './ConfirmationDialog';
 import { BiCake, BiFileBlank, BiReset, BiSave, BiTrash } from "react-icons/bi";
 
+import { ClosableModalWindow } from './ModalWindow';
+import { motion, AnimatePresence } from 'framer-motion';
+
 interface ToolboxProps {
     currentTool: Tool
     setCurrentTool: React.Dispatch<React.SetStateAction<Tool>>
@@ -99,11 +102,7 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             <ActionButton onClick={StateManager.zoomOut} icon={<BsZoomOut />} title="Zoom Out" bgColor="bg-blue-500"></ActionButton>
             {/* Clear Stage No Save Button */}
             <div className="flex flex-col items-center mt-4"></div>
-            <ActionButton
-                onClick={handleClearMachineClick}
-                icon={<BiFileBlank />}
-                title="New Automaton"
-                bgColor="bg-black" margin="m-10"/>
+            <ActionButton onClick={handleClearMachineClick}icon={<BiFileBlank />}title="New Automaton"bgColor="bg-black" margin="m-10"></ActionButton>
       
       
             {/* Undo Button */}
@@ -111,15 +110,31 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Redo Button */}
             <ActionButton onClick={StateManager.redoState} icon={<BsFillArrowRightCircleFill />} title="Redo most recent action" bgColor="bg-blue-500"></ActionButton>                               
         </div>
-        {
+        {/*
+            <AnimatePresence>
+            {isDialogVisible&&(
+                <motion.div>
+                    <ClosableModalWindow title='Clear Automaton' close={handleCancel}>
+                        <ConfirmationDialog
+                            isVisible={isDialogVisible}
+                            onConfirm={handleConfirm}
+                            onCancel={handleCancel}
+                            message="Are you sure you want to clear the machine?"
+                        />
+                    </ClosableModalWindow>
+                </motion.div>
+            )}
+        </AnimatePresence>*/}
+        
+        {isDialogVisible&&(
+        <ConfirmationDialog
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        message="Are you sure you want to clear the machine?"
+        
+                />
+            )}
             
-   <ConfirmationDialog
-     isVisible={isDialogVisible}
-     onConfirm={handleConfirm}
-     onCancel={handleCancel}
-     message="Are you sure you want to clear the machine?"
-   />
-   }
 
         </>
     );
