@@ -1801,6 +1801,11 @@ export default class StateManager {
         return;
     }    
 
+  //StateManager._nodeWrappers is a private property I provided a public getter to access the nodes
+  public static get nodeWrappers(): Array<NodeWrapper> {
+    return [...StateManager._nodeWrappers];
+  }
+
 }
 
         

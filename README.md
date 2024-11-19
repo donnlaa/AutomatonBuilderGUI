@@ -2,7 +2,7 @@
 
 ## Setup
 
-First, make sure you have Node installed. Then, navigate to this directory
+First, make sure you have Node version 14.0 or greater installed. Then, navigate to this directory
 in the terminal, and run:
 
 ```sh
