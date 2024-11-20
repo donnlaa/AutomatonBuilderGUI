@@ -114,21 +114,6 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Export Button */}
             <ActionButton onClick={StateManager.exportAutomatonToImage} icon={<FaRegImage />} title="Export Automaton to PNG" bgColor="bg-teal-500" margin="m-10"/>
         </div>
-        {/*  This does not work as intended. It will clear the screen as it should but the animations and closable window are broken and causes lag.
-            <AnimatePresence>
-            {isDialogVisible&&(
-                <motion.div>
-                    <ClosableModalWindow title='Clear Automaton' close={handleCancel}>
-                        <ConfirmationDialog
-                            isVisible={isDialogVisible}
-                            onConfirm={handleConfirm}
-                            onCancel={handleCancel}
-                            message="Are you sure you want to clear the machine?"
-                        />
-                    </ClosableModalWindow>
-                </motion.div>
-            )}
-        </AnimatePresence>*/}
         
         {isDialogVisible&&(
         <ConfirmationDialog
