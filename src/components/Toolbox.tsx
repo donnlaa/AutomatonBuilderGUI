@@ -3,11 +3,15 @@ import ToolButton from './ToolButton';
 import StateManager from '../StateManager';
 import { useRef } from 'react';
 import { useState } from 'react';
-import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill } from 'react-icons/bs';
+import { BsCursor, BsCursorFill, BsDownload, BsNodePlus, BsNodePlusFill, BsPlusCircle, BsPlusCircleFill, BsUpload, BsZoomIn, BsZoomOut, BsFillArrowLeftCircleFill, BsFillArrowRightCircleFill, BsCake } from 'react-icons/bs';
 import { TbZoomReset } from "react-icons/tb";
 import { GrGrid } from "react-icons/gr";
+import ConfirmationDialog from './ConfirmationDialog';
 import { FaRegImage } from "react-icons/fa6";
 import { BiFileBlank, BiReset} from "react-icons/bi";
+
+import { ClosableModalWindow } from './ModalWindow';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 interface ToolboxProps {
@@ -51,8 +55,23 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
     const handleLoadButtonClick = () => {
         fileInputRef.current?.click(); // Programmatically click the hidden file input
     };
+    const [isDialogVisible, setIsDialogVisible] = useState(false);
+
+  const handleClearMachineClick = () => {
+    setIsDialogVisible(true);
+  };
+
+  const handleConfirm = () => {
+    StateManager.clearMachine();
+    setIsDialogVisible(false);
+  };
+
+  const handleCancel = () => {
+    setIsDialogVisible(false);
+  };
 
     return (
+        <>
         <div className='flex flex-col text-xl'>
             <ToolButton tool={Tool.Select} setCurrentTool={props.setCurrentTool} currentTool={props.currentTool} title="Select [S]">
                 <div className='flex flex-row items-center place-content-center'>
@@ -84,7 +103,10 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Zoom Out Button */}
             <ActionButton onClick={StateManager.zoomOut} icon={<BsZoomOut />} title="Zoom Out" bgColor="bg-blue-500"></ActionButton>
             {/* Clear Stage No Save Button */}
-            <ActionButton onClick={StateManager.clearMachine} icon={<BiFileBlank />} title="New Automaton" bgColor="bg-black" margin="m-10"></ActionButton>
+            <div className="flex flex-col items-center mt-4"></div>
+            <ActionButton onClick={handleClearMachineClick}icon={<BiFileBlank />}title="New Automaton"bgColor="bg-black" margin="m-10"></ActionButton>
+      
+      
             {/* Undo Button */}
             <ActionButton onClick={StateManager.undoState} icon={<BsFillArrowLeftCircleFill />} title="Undo most recent action" bgColor="bg-blue-500"></ActionButton>
             {/* Redo Button */}
@@ -92,5 +114,32 @@ export default function Toolbox(props: React.PropsWithChildren<ToolboxProps>) {
             {/* Export Button */}
             <ActionButton onClick={StateManager.exportAutomatonToImage} icon={<FaRegImage />} title="Export Automaton to PNG" bgColor="bg-teal-500" margin="m-10"/>
         </div>
+        {/*  This does not work as intended. It will clear the screen as it should but the animations and closable window are broken and causes lag.
+            <AnimatePresence>
+            {isDialogVisible&&(
+                <motion.div>
+                    <ClosableModalWindow title='Clear Automaton' close={handleCancel}>
+                        <ConfirmationDialog
+                            isVisible={isDialogVisible}
+                            onConfirm={handleConfirm}
+                            onCancel={handleCancel}
+                            message="Are you sure you want to clear the machine?"
+                        />
+                    </ClosableModalWindow>
+                </motion.div>
+            )}
+        </AnimatePresence>*/}
+        
+        {isDialogVisible&&(
+        <ConfirmationDialog
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        message="Are you sure you want to clear the machine?"
+        
+                />
+            )}
+            
+
+        </>
     );
 }
