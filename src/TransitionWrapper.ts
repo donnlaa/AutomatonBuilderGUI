@@ -321,7 +321,7 @@ export default class TransitionWrapper extends SelectableObject {
      * the arrow and token labels.
      * @returns {Konva.Node}
      */
-    public konvaObject(): Konva.Node {
+    public get konvaObject(): Konva.Node {
         return this.konvaGroup;
     }
 

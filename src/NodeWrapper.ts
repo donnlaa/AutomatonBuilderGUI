@@ -276,7 +276,7 @@ export default class NodeWrapper extends SelectableObject {
    * we want to place them on the canvas. Chances are this shouldn't need
    * to be called.
    */
-  public deleteKonvaObjects() {
+  public deleteKonvaObjects(): void {
     this.nodeGroup.destroy();
   }
 
@@ -402,21 +402,21 @@ export default class NodeWrapper extends SelectableObject {
       StateManager.updateTentativeTransitionHead(ev.evt.pageX, ev.evt.pageY);
     }
     else if (StateManager.currentTool === Tool.Select) {
-      this.konvaObject().fire('move', ev);
+      this.konvaObject.fire('move', ev);
       let delta = {
-        x: this.konvaObject().x() - this.lastDragPos.x,
-        y: this.konvaObject().y() - this.lastDragPos.y,
+        x: this.konvaObject.x() - this.lastDragPos.x,
+        y: this.konvaObject.y() - this.lastDragPos.y,
       };
-      this.lastDragPos = this.konvaObject().position();
+      this.lastDragPos = this.konvaObject.position();
       // Move all selected objects along with this one!
       const allOtherSelected = StateManager.selectedObjects.filter((i) => i !== this);
       allOtherSelected.forEach((obj) => {
         if (obj instanceof NodeWrapper) {
-          obj.konvaObject().move({
+          obj.konvaObject.move({
             x: delta.x,
             y: delta.y
           });
-          obj.konvaObject().fire('move', ev);
+          obj.konvaObject.fire('move', ev);
         }
       });
     }
@@ -508,9 +508,8 @@ export default class NodeWrapper extends SelectableObject {
 
   /**
    * Returns the Konva group that visualizes this node.
-   * @returns {Konva.Node}
    */
-  public konvaObject(): Konva.Node {
+  public get konvaObject(): Konva.Node {
     return this.nodeGroup;
   }
 
