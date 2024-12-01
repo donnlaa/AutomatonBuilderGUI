@@ -105,9 +105,17 @@ export default class StateManager {
     }
 
     /** Returns whether or not nodes snap to the grid. */
-    public static isSnapToGridEnabled(): boolean {
+    public static get snapToGridEnabled(): boolean {
         return StateManager._snapToGridEnabled;
     }
+
+    /** Returns whether or not nodes snap to the grid. */
+    public static set snapToGridEnabled(newValue: boolean) {
+        StateManager._snapToGridEnabled = newValue;
+    }
+
+    /** Stores the currently copied or cut selectable objects for clipboard operations. */
+    private static _clipboard: Array<SelectableObject> = [];
 
     /** Sets up the state manager and an empty automaton. */
     public static initialize() {
@@ -262,10 +270,104 @@ export default class StateManager {
                 listening: false,
             }));
         }
-
         // Draw the grid
         StateManager._gridLayer.batchDraw();
     }
+
+
+    //diagram bounds to know which exact part of the canvas to export
+    private static getDiagramBounds() {
+        if (!StateManager._nodeWrappers.length && !StateManager._transitionWrappers.length) {
+            return { x: 0, y: 0, width: 0, height: 0 };
+        }
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        StateManager._nodeWrappers.forEach((node) => {
+            const { x, y } = node.nodeGroup.position();
+            const radius = NodeWrapper.NodeRadius;
+            minX = Math.min(minX, x - radius);
+            minY = Math.min(minY, y - radius);
+            maxX = Math.max(maxX, x + radius);
+            maxY = Math.max(maxY, y + radius);
+        });
+
+        const padding = 150;
+        minX -= padding;
+        minY -= padding;
+        maxX += padding;
+        maxY += padding;
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
+    }
+
+
+    public static exportAutomatonToImage() {
+        if (!StateManager._stage) {
+            console.error("error: _stage is not initialized");
+            return;
+        }
+        const originalScale = StateManager._stage.scale();
+        const originalPosition = StateManager._stage.position();
+
+        StateManager._stage.scale({ x: 1, y: 1 });
+        StateManager._stage.position({ x: 0, y: 0 });
+        StateManager._stage.batchDraw();
+
+        StateManager.transitions.forEach((transition) => {
+            transition.updatePoints();
+            if (!transition.konvaGroup.getParent()) {
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            }
+        });
+
+        StateManager._gridLayer.batchDraw();
+        StateManager._nodeLayer.batchDraw();
+        StateManager._transitionLayer.batchDraw();
+
+        const bounds = StateManager.getDiagramBounds();
+
+        //add temporary white background
+        const background = new Konva.Rect({
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+            fill: 'white',
+            listening: false,
+        });
+        StateManager._gridLayer.add(background);
+        StateManager._gridLayer.moveToBottom();
+        StateManager._gridLayer.batchDraw();
+
+        const dataURL = StateManager._stage.toDataURL({
+            mimeType: "image/png",
+            pixelRatio: 2,
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+        });
+
+        background.destroy();
+        StateManager._gridLayer.batchDraw();
+
+        StateManager._stage.scale(originalScale);
+        StateManager._stage.position(originalPosition);
+        StateManager._stage.batchDraw();
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = dataURL;
+        downloadLink.download = "diagram.png";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+
 
     /** Gets the current tool. */
     public static get currentTool() {
@@ -387,8 +489,8 @@ export default class StateManager {
             data.node.deselect();
 
             // Remove the node itself
-            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(node => {
-                return node !== node;
+            StateManager._nodeWrappers = StateManager._nodeWrappers.filter(toDelete => {
+                return node !== toDelete;
             });
             data.node.nodeGroup.remove();
 
@@ -566,6 +668,250 @@ export default class StateManager {
             }
             return;
         }
+
+         // **Handle Ctrl+C (Copy)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "c") {
+          ev.preventDefault();
+          StateManager.copySelectedObjects();
+          return;
+        }
+
+        // **Handle Ctrl+X (Cut)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "x") {
+          ev.preventDefault();
+          StateManager.cutSelectedObjects();
+          return;
+        }
+        // **Handle Ctrl+V (Paste)**
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "v") {
+          ev.preventDefault();
+          StateManager.pasteClipboardObjects();
+          return;
+        }
+    }
+
+    /** Copies the selected objects, including any transitions between selected nodes. */
+    public static copySelectedObjects() {
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Combine selected nodes and transitions between them
+        this._clipboard = [...selectedNodes, ...transitionsBetweenSelectedNodes];
+    }
+
+    /** Pastes the copied objects, including transitions between pasted nodes. */
+    public static pasteClipboardObjects(offsetX: number = 20, offsetY: number = 20) {
+        if (!this._clipboard.length) {
+            console.warn("Clipboard is empty, nothing to paste.");
+            return;
+        }
+
+        let pasteData = new PasteActionData();
+
+        // Count the number of nodes to be pasted for action description
+        let nodeCount = this._clipboard.filter(obj => obj instanceof NodeWrapper).length;
+        let actionDescription = `Paste ${nodeCount} Object${nodeCount !== 1 ? 's' : ''}`;
+
+        let performPasteForward = (data: PasteActionData) => {
+            if (data.nodes.length === 0) {
+                // First time performing paste, create nodes
+                const nodeMap = new Map<string, NodeWrapper>();
+
+                // Create new nodes and map them to the original nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof NodeWrapper) {
+                        const newNode = new NodeWrapper(`q${StateManager._nextStateId++}`);
+                        const position = obj.nodeGroup.position();
+                        newNode.createKonvaObjects(position.x + offsetX, position.y + offsetY);
+                        newNode.labelText = obj.labelText; // Copy label
+                        newNode.isAcceptNode = obj.isAcceptNode; // Copy accept state status
+                        StateManager._nodeWrappers.push(newNode);
+                        StateManager._nodeLayer.add(newNode.nodeGroup);
+
+                        data.nodes.push(newNode);
+                        nodeMap.set(obj.id, newNode);
+                    }
+                });
+
+                // Create new transitions using the new nodes
+                this._clipboard.forEach((obj) => {
+                    if (obj instanceof TransitionWrapper) {
+                        const sourceNode = nodeMap.get(obj.sourceNode.id);
+                        const destNode = nodeMap.get(obj.destNode.id);
+
+                        // Only create transitions if both source and dest nodes were copied
+                        if (sourceNode && destNode) {
+                            const newTransition = new TransitionWrapper(
+                                sourceNode,
+                                destNode,
+                                obj.isEpsilonTransition,
+                                new Set(obj.tokens) // Copy tokens
+                            );
+
+                            StateManager._transitionWrappers.push(newTransition);
+                            StateManager._transitionLayer.add(newTransition.konvaGroup);
+
+                            data.transitions.push(newTransition);
+                        }
+                    }
+                });
+            } else {
+                // Redoing the paste action, reuse nodes and transitions
+                data.nodes.forEach((node) => {
+                    StateManager._nodeWrappers.push(node);
+                    StateManager._nodeLayer.add(node.nodeGroup);
+                });
+
+                data.transitions.forEach((transition) => {
+                    StateManager._transitionWrappers.push(transition);
+                    StateManager._transitionLayer.add(transition.konvaGroup);
+                });
+            }
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Select the newly pasted nodes
+            StateManager.deselectAllObjects();
+            data.nodes.forEach((node) => StateManager.selectObject(node));
+        };
+
+        let performPasteBackward = (data: PasteActionData) => {
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // If any of the nodes were the start node, reset the start node
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let pasteAction = new Action(
+            "pasteClipboardObjects",
+            actionDescription,
+            performPasteForward,
+            performPasteBackward,
+            pasteData
+        );
+
+        UndoRedoManager.pushAction(pasteAction);
+    }
+
+   /** Cuts the selected objects, including any transitions between selected nodes. */
+    public static cutSelectedObjects() {
+        if (this._selectedObjects.length === 0) {
+            console.warn("No objects selected, nothing to cut.");
+            return;
+        }
+
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+
+        // Find transitions between selected nodes
+        const transitionsBetweenSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) && selectedNodes.includes(transition.destNode)
+        );
+
+        // Copy selected transitions
+        const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
+
+        // Combine selected nodes and transitions
+        this._clipboard = [...selectedNodes, ...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Create an action to remove the selected objects
+        let cutData = new CutActionData();
+
+        cutData.nodes = selectedNodes;
+        cutData.transitions = [...selectedTransitions, ...transitionsBetweenSelectedNodes];
+
+        // Save start node if it's being cut
+        cutData.wasStartNode = cutData.nodes.includes(StateManager.startNode);
+
+        let totalObjects = cutData.nodes.length + cutData.transitions.length;
+        let actionDescription = `Cut ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
+
+        let performCutForward = (data: CutActionData) => {
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // Reset start node if necessary
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+        };
+
+        let performCutBackward = (data: CutActionData) => {
+            // Add nodes back
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers.push(node);
+                StateManager._nodeLayer.add(node.nodeGroup);
+
+                // Restore start node if necessary
+                if (data.wasStartNode && StateManager.startNode == null) {
+                    StateManager.startNode = node;
+                }
+            });
+
+            // Add transitions back
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let cutAction = new Action(
+            "cutSelectedObjects",
+            actionDescription,
+            performCutForward,
+            performCutBackward,
+            cutData
+        );
+
+        UndoRedoManager.pushAction(cutAction);
+
+        StateManager.deselectAllObjects();
     }
 
     /**
@@ -975,33 +1321,127 @@ export default class StateManager {
      * undo/redo safe manner.
      */
     public static deleteAllSelectedObjects() {
-        let selectedNodes = new Set<NodeWrapper>(StateManager._selectedObjects.filter(i => i instanceof NodeWrapper).map(i => i as NodeWrapper));
-        let selectedTransitions = new Set<TransitionWrapper>(StateManager._selectedObjects.filter(i => i instanceof TransitionWrapper).map(i => i as TransitionWrapper));
+        if (this._selectedObjects.length === 0) {
+            return;
+        }
 
-        // Find the transitions we have selected that are already going to be deleted
-        // by a node deletion operation
-        let extraTransitions = new Set<TransitionWrapper>();
-        selectedTransitions.forEach((transition) => {
-            if (selectedNodes.has(transition.sourceNode) || selectedNodes.has(transition.destNode)) {
-                extraTransitions.add(transition);
-            }
-        });
+        // Copy selected nodes
+        const selectedNodes = this._selectedObjects.filter(obj => obj instanceof NodeWrapper) as NodeWrapper[];
+        const prevStartNode = StateManager.startNode;
 
-        // Remove the transitions that were already going to be deleted,
-        // so we don't delete them twice
-        extraTransitions.forEach((transition) => {
-            selectedTransitions.delete(transition);
-        });
+        // Find transitions between selected nodes
+        const transitionsInvolvingSelectedNodes = this._transitionWrappers.filter(transition =>
+            selectedNodes.includes(transition.sourceNode) || selectedNodes.includes(transition.destNode)
+        );
 
-        // Remove all states
-        selectedNodes.forEach(state => StateManager.removeNode(state as NodeWrapper));
+        // Copy selected transitions
+        const selectedTransitions = this._selectedObjects.filter(obj => obj instanceof TransitionWrapper) as TransitionWrapper[];
 
-        // Remove all transitions (that aren't connected to selected states)
-        selectedTransitions.forEach(trans => StateManager.removeTransition(trans as TransitionWrapper));
 
-        // Empty selection
-        StateManager.setSelectedObjects([]);
-        StateManager._selectedObjects = [];
+        // Create an action to remove the selected objects
+        let removeData = new RemoveNodeActionDataMulti();
+        
+
+        removeData.nodes = selectedNodes;
+        removeData.transitions = [...selectedTransitions, ...transitionsInvolvingSelectedNodes];
+
+        // Save start node if it's being removed
+        removeData.wasStartNode = removeData.nodes.includes(StateManager.startNode);
+
+        let totalObjects = removeData.nodes.length + removeData.transitions.length;
+        let actionDescription = `Delete ${totalObjects} Object${totalObjects !== 1 ? 's' : ''}`;
+
+        let performRemoveForward = (data: RemoveNodeActionDataMulti) => {
+            // Remove transitions
+            data.transitions.forEach((transition) => {
+                StateManager._transitionWrappers = StateManager._transitionWrappers.filter(t => t !== transition);
+                transition.konvaGroup.remove();
+
+                var sourceNode = transition.sourceNode;
+                var destNode = transition.destNode;
+    
+                var remainingTransition = StateManager.transitions.find(t =>
+                    (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
+                    (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id) &&
+                    // we don't want to change the state of a node thats going to be deleted
+                    (!data.transitions.includes(t))
+                );
+
+                //stop curving if remaining adjacent transition exists
+                if (remainingTransition) {
+                    remainingTransition.priority = "default";
+                    remainingTransition.updatePoints();                
+                }
+
+            });
+
+            // Remove nodes
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers = StateManager._nodeWrappers.filter(n => n !== node);
+                node.nodeGroup.remove();
+
+                // Reset start node if necessary
+                if (StateManager.startNode === node) {
+                    StateManager.startNode = null;
+                }
+            });
+
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+
+            // Deselect all objects
+            StateManager.deselectAllObjects();
+        };
+
+        let performRemoveBackward = (data: RemoveNodeActionDataMulti) => {
+            // Add nodes back
+            data.nodes.forEach((node) => {
+                StateManager._nodeWrappers.push(node);
+                StateManager._nodeLayer.add(node.nodeGroup);
+
+                // Restore start node if necessary
+                if (data.wasStartNode && StateManager.startNode == null && node===prevStartNode) {
+                    StateManager.startNode = node;
+                }
+            });
+            // Add transitions back
+            data.transitions.forEach((transition) => {
+                var sourceNode = transition.sourceNode;
+                var destNode = transition.destNode;
+    
+                var adjacentTransitionInScene = StateManager.transitions.find(t =>
+                    (t.sourceNode.id === sourceNode.id && t.destNode.id === destNode.id) ||
+                    (t.sourceNode.id === destNode.id && t.destNode.id === sourceNode.id)
+                );
+
+                // set curve back if adjacent node exists
+                if (adjacentTransitionInScene) {
+                    adjacentTransitionInScene.priority = "curve";
+                    adjacentTransitionInScene.updatePoints();                
+                }
+
+                StateManager._transitionWrappers.push(transition);
+                StateManager._transitionLayer.add(transition.konvaGroup);
+            });
+
+            StateManager._nodeLayer?.draw();
+            StateManager._transitionLayer?.draw();
+            StateManager.updateTransitions();
+        };
+
+        let removeAction = new Action(
+            "deleteObjects",
+            actionDescription,
+            performRemoveForward,
+            performRemoveBackward,
+            removeData
+        );
+
+        UndoRedoManager.pushAction(removeAction);
+
+        StateManager.deselectAllObjects();
     }
 
     /**
@@ -1120,6 +1560,23 @@ export default class StateManager {
         const scaleBy = 0.9;  // Decrease scale by 10%
         StateManager.applyZoom(scaleBy);
     }
+    /**
+     * Clear out the automaton and alphabet
+     * then reset state ID to 0
+     * then reset action stack
+     * 
+     * 
+     */
+    public static clearMachine() {
+        //StateManager.deselectAllObjects();
+        StateManager._nodeWrappers.forEach(n => StateManager.selectObject(n));
+        StateManager.deleteAllSelectedObjects();
+        StateManager._alphabet.forEach(t => StateManager.removeToken(t));
+        StateManager._nextStateId=0;
+        UndoRedoManager.reset();
+
+    }
+    
 
     /**
      * Zooms the view in or out by a given ratio.
@@ -1167,7 +1624,7 @@ export default class StateManager {
     /** Gets a runnable DFA object from the current automaton. */
     public static get dfa(): DFA {
         let outputDFA = new DFA();
-        const stateManagerData = StateManager.toJSON();
+        const stateManagerData = StateManager.toSerializable();
         outputDFA.inputAlphabet = stateManagerData.alphabet.map((s) => s.symbol);
         outputDFA.states = stateManagerData.states.map((s) => new DFAState(s.label));
         outputDFA.acceptStates = stateManagerData.acceptStates.map((s) => {
@@ -1196,15 +1653,15 @@ export default class StateManager {
     }
 
     /**
-     * Converts the current automaton into a JSON object that can be
-     * serialized. Note that this is *not* a JSON string.
-     * @returns 
+     * Converts the current automaton into an object that can be
+     * serialized.
+     * @returns {SerializableAutomaton} A serializable automaton object.
      */
-    public static toJSON() {
+    public static toSerializable(): SerializableAutomaton {
         return {
-            states: StateManager._nodeWrappers.map(node => node.toJSON()),
-            alphabet: StateManager._alphabet.map(tok => tok.toJSON()),
-            transitions: StateManager._transitionWrappers.map(trans => trans.toJSON()),
+            states: StateManager._nodeWrappers.map(node => node.toSerializable()),
+            alphabet: StateManager._alphabet.map(tok => tok.toSerializable()),
+            transitions: StateManager._transitionWrappers.map(trans => trans.toSerializable()),
             startState: StateManager._startNode != null ? StateManager._startNode.id : null,
             acceptStates: StateManager._nodeWrappers.filter(node => node.isAcceptNode).map(node => node.id)
         };
@@ -1215,7 +1672,7 @@ export default class StateManager {
      * user's device.
      */
     public static downloadJSON() {
-        const jsonString = JSON.stringify(StateManager.toJSON(), null, 4);
+        const jsonString = JSON.stringify(StateManager.toSerializable(), null, 4);
 
         // A hacky solution in my opinion, but apparently it works so hey.
         // Adapted from https://stackoverflow.com/a/18197341
@@ -1235,6 +1692,7 @@ export default class StateManager {
      */
     public static uploadJSON(ev: ChangeEvent<HTMLInputElement>) {
         const file = ev.target.files.item(0);
+        ev.target.value = null;
 
         const fileText = file.text()
             .then(text => {
@@ -1250,10 +1708,10 @@ export default class StateManager {
      * into the program.
      * @param json The deserialized JSON object to load.
      */
-    public static loadAutomaton(json: SerializedAutomaton) {
+    public static loadAutomaton(json: SerializableAutomaton) {
         const { states, alphabet, transitions, startState, acceptStates } = json;
 
-        // TODO: Clear all current stuff
+        StateManager.clearMachine();
 
         // Load each state
         states.forEach(state => {
@@ -1422,32 +1880,46 @@ export default class StateManager {
         });
         StateManager._transitionLayer.draw();
     }
+    /**
+     * Wrapper function for the undoredomanager.undo to be accessed via a button and update properly
+     */
+    public static undoState() {
+        UndoRedoManager.undo();
+        return;
+    }
+    /**
+     * Wrapper function for the undoredomanager.redo to be accessed via a button and update properly
+     */
+    public static redoState() {
+        UndoRedoManager.redo();
+        return;
+    }    
+
+  //StateManager._nodeWrappers is a private property I provided a public getter to access the nodes
+  public static get nodeWrappers(): Array<NodeWrapper> {
+    return [...StateManager._nodeWrappers];
+  }
+
 }
+
+        
 
 /**
  * A representation of an automaton that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* automaton, or alternatively a *serializable*
- * automaton. We may want to rename this to be more accurate.
  */
-interface SerializedAutomaton {
-    states: Array<SerializedState>,
-    alphabet: Array<SerializedToken>,
-    transitions: Array<SerializedTransition>,
+interface SerializableAutomaton {
+    states: Array<SerializableState>,
+    alphabet: Array<SerializableToken>,
+    transitions: Array<SerializableTransition>,
     startState: string,
     acceptStates: Array<string>
 }
 
 /**
  * A representation of a node that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* state, or alternatively a *serializable*
- * state. We may want to rename this to be more accurate.
  */
-interface SerializedState {
+export interface SerializableState {
     id: string,
     x: number,
     y: number,
@@ -1456,12 +1928,8 @@ interface SerializedState {
 
 /**
  * A representation of a token that can be converted to and from a JSON string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* token, or alternatively a *serializable*
- * token. We may want to rename this to be more accurate.
  */
-interface SerializedToken {
+export interface SerializableToken {
     id: string,
     symbol: string
 }
@@ -1469,12 +1937,8 @@ interface SerializedToken {
 /**
  * A representation of a transition that can be converted to and from a JSON
  * string.
- * 
- * **NOTE:** The name of this class may be inaccurate; it is perhaps more
- * accurately a *deserialized* transition, or alternatively a *serializable*
- * transition. We may want to rename this to be more accurate.
  */
-interface SerializedTransition {
+export interface SerializableTransition {
     id: string,
     source: string,
     dest: string,
@@ -1510,6 +1974,18 @@ class RemoveNodeActionData extends ActionData {
      * start node.
      */
     public isStart: boolean;
+}
+
+/** Holds the data associated with a delete all selected objects action. */
+class RemoveNodeActionDataMulti extends ActionData {
+  /** The nodes removed in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions removed in this action. */
+  public transitions: TransitionWrapper[] = [];
+
+  /** Whether any of the nodes removed were the start node. */
+  public wasStartNode: boolean = false;
 }
 
 /** Holds the data associated with a "move nodes" action. */
@@ -1603,4 +2079,25 @@ class SetTokenSymbolActionData extends ActionData {
 
     /** The token modified in this action. */
     public token: TokenWrapper;
+}
+
+/** Holds the data associated with a "paste" action. */
+class PasteActionData extends ActionData {
+  /** The nodes created in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions created in this action. */
+  public transitions: TransitionWrapper[] = [];
+}
+
+/** Holds the data associated with a "cut" action. */
+class CutActionData extends ActionData {
+  /** The nodes removed in this action. */
+  public nodes: NodeWrapper[] = [];
+
+  /** The transitions removed in this action. */
+  public transitions: TransitionWrapper[] = [];
+
+  /** Whether any of the nodes removed were the start node. */
+  public wasStartNode: boolean = false;
 }

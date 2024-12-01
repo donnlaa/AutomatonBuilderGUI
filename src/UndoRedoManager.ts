@@ -87,6 +87,10 @@ export default class UndoRedoManager {
   private static callListeners() {
     this._listeners.forEach((listener) => listener());
   }
+  public static reset() {
+    this._stack = [];
+    this.callListeners();
+  }
 }
 
 export class Action {

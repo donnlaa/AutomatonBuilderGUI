@@ -20,7 +20,7 @@ export default abstract class SelectableObject {
     /**
      * Returns the Konva object/group used to draw this object.
      */
-    public abstract konvaObject(): Konva.Node;
+    public abstract get konvaObject(): Konva.Node;
 
     /**
      * Deletes the Konva object/group used to draw this object.
