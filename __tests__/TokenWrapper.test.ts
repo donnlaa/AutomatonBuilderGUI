@@ -38,7 +38,7 @@ describe("TokenWrapper", () => {
   describe("toJSON", () => {
     test("serializes correctly", () => {
       const token = new TokenWrapper("a");
-      const json = token.toJSON();
+      const json = token.toSerializable();
       expect(json).toEqual({
         id: token.id,
         symbol: "a",
