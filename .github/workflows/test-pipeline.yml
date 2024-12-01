@@ -3,7 +3,7 @@ name: Run Tests on Push
 on:
   push:
     branches:
-      - "**" # Run on every branch
+      - "**"
 
 jobs:
   test:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16" # Replace with your required Node.js version
+          node-version: "16"
 
       - name: Install dependencies
         run: npm install
